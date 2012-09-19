@@ -128,7 +128,7 @@ L'algorithme du lancer de rayon stochastique utilise cette méthode pour estimer 
 
 Une stratégie couramment utilisée pour réduire la variance de l'estimateur est d'utiliser une distribution $p$ adaptée à la fonction à intégrer. Cette méthode est appelée échantillonage préférentiel (Importance Sampling).
 
-Une distribution uniforme sur l'hémisphère ($p(\Phi) = \frac{1}{2\Pi}$) conduit généralement à de mauvais résultats: lorsque peu de rayons sont lancés l'image de sortie est très bruitée. Cela est du au fait que toutes les directions sont traitées de la meme manière. Or l'intégrande est très faible pour certaines directions (par exemple les directions rasantes, le cosinus avec la normale étant nul; ou les directions n'apportant que peu d'énergie). Une bonne distribution doit donner plus de chances d'être choisi aux directions pour lesquelles l'intégrande est forte. Cela conduit à une réduction du bruit et une convergence plus rapide vers la véritable image.
+Une distribution uniforme sur l'hémisphère ($p(\Phi) = \frac{1}{2\pi}$) conduit généralement à de mauvais résultats: lorsque peu de rayons sont lancés l'image de sortie est très bruitée. Cela est du au fait que toutes les directions sont traitées de la meme manière. Or l'intégrande est très faible pour certaines directions (par exemple les directions rasantes, le cosinus avec la normale étant nul; ou les directions n'apportant que peu d'énergie). Une bonne distribution doit donner plus de chances d'être choisi aux directions pour lesquelles l'intégrande est forte. Cela conduit à une réduction du bruit et une convergence plus rapide vers la véritable image.
 
 Dans l'algorithme du lancer de rayon, la fonction a intégrer est un produit de deux fonctions:
 
@@ -215,19 +215,42 @@ Soit $n$ un n\oe ud du graphe. On note $V(n)$ l'ensemble des n\oe uds visibles d
 
 \subsection{Utilisation des points d'importance}
 
-Les points d'importance sont utilisés pour échantillonner l'hémisphère $\Omega_x$ lors d'un rebond en $x$. Pour cela on récupère le n\oe ud $n$ le plus proche de $x$ (faisable en temps constant dans notre implantation en utilisant une grille 3D). On construit alors la direction d'importance $\vec{ximp_n}$ associée à $x$. La distribution utilisée est alors:
+Les points d'importance sont utilisés pour échantillonner l'hémisphère $\Omega_x$ lors d'un rebond en $x$. Pour cela on récupère le n\oe ud $n$ le plus proche de $x$ (faisable en temps constant dans notre implantation en utilisant une grille 3D). On construit alors la direction d'importance $\overrightarrow{ximp_n}$ associée à $x$. La distribution utilisée est alors:
 
 \begin{center}
 
 \begin{equation*}
-p_{skel}(\Phi) = \frac{s + 2}{2\Pi} cos^s(\hat{\vec{ximp_n}, \Phi})
+p_{skel}(\Phi) = \frac{s + 2}{2\pi} cos^s(\vec{ximp_n}, \Phi)
 \end{equation*}
 
 \end{center}
 
+Le paramètre $s$ permet de concentrer les tirs de rayons autour de la direction d'importance $\overrightarrow{ximp_n}$.
+
 \subsection{Résultats et discussion}
 
-\section{Échantillonage préférentiel multiple}
+Notre méthode conduit à une bonne réduction du bruit, en particulier dans les zones sombre ou l'illumination est exclusivement indirecte.
+
+
+Un artefact apparaît néanmoins: les speckles. Les speckles sont des pixels anormalement illuminés dus à un mauvais échantillonnage. Lorsqu'une direction possédant une forte valeur mais une faible probabilité est choisie, l'estimateur de Monte-Carlo donne une valeur anormalement élevée conduisant à l'apparition d'un speckle. Ce type d'artefact s'estompe en augmentant le nombre de rayons par pixels (dû à la convergence de l'estimateur). Une autre solution appelée échantillonnage préférentiel multiple permet d'estomper les speckles. Elle est décrite dans la section suivante.
+
+Plusieurs cas pathologiques peuvent nous conduire à nous rabattre sur un échantillonnage basé sur la BRDF:
+
+\begin{itemize}
+\item La direction d'importance peut pointer du coté opposé à la normale en $x$. Cela signifie que le point d'importance est situé de l'autre coté de la surface.
+
+\item Le point d'importance peut ne pas être visible depuis $x$. Dans ce cas il est inutile de tirer aux alentours de sa direction car notre rayon a de forte chances d?être intersecté avant d'atteindre la lumière.
+\end{itemize}
+
+\section{Échantillonnage préférentiel multiple}
+
+Comme nous l'avons évoqué dans la section précédente, notre méthode conduit à l'apparition de speckles. Le fait d'ignorer totalement la BRDF au moment d'échantillonner est une des causes de l'apparition de cet artefact. Nous proposons d'utiliser une méthode appelée échantillonnage préférentiel multiple pour prendre en compte à la fois notre stratégie et une stratégie basée sur la BRDF.
+
+\subsection{Description de la méthode}
+
+\subsection{Résultats et discussion}
+
+\section{Conclusion}
 
 %-------------------------------------------------------------------------
 \newpage
