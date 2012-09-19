@@ -49,36 +49,32 @@ Le lancer de rayons est un algorithme de rendu utilisé en illumination globale. 
 
 \subsection{Principe général}
 
-Le lancer de rayons fonctionne de la manière suivante: partant d'une caméra placé dans une scène virtuelle composée de surfaces et de lumière, on lancer un nombre $N$ de rayons à travers l'image virtuelle vue par la caméra. Ces rayons rebondissent dans la scène jusqu'à atteindre les lumières ou un maximum de rebonds fixé. Des chemins entre la caméra et les lumières sont ainsi crées et on calcule la quantité de lumière traversant chacun des chemins en se basant sur les propriétés des matériaux à chaque point d'impact. On obtient ainsi une couleur pour chaque rayon lancé. Les couleurs calculées sont utilisées pour reconstruire l'image finale.
+Le lancer de rayons fonctionne de la manière suivante: partant d'une caméra placé dans une scène virtuelle composée de surfaces et de lumière, on lance des rayons à travers l'image virtuelle vue par la caméra. Ces rayons rebondissent dans la scène jusqu'à atteindre les lumières ou un maximum de rebonds fixé. Des chemins entre la caméra et les lumières sont ainsi crées et on calcule la quantité de lumière traversant chacun des chemins en se basant sur les propriétés des matériaux à chaque point d'impact. On obtient ainsi une couleur pour chaque rayon lancé. Les couleurs calculées sont utilisées pour reconstruire l'image finale.
 
-\subsection{Radiométrie}
+\subsection{Équation du rendu}
 
-L'algorithme du lancé de rayon est entièrement basé sur les lois de la radiométrie. La radiométrie est le domaine qui étudie la mesure des rayonnements électromagnétiques, en particulier la lumière visible.
-
-Soit $\mathbb{S}$ une scène en trois dimensions dont les éléments sont des surfaces de $\mathbb{R}^3$ (ne se recouvrant pas). Soit $\mathbb{S}_L \subset S$ l'ensemble des lumières, c'est à dire l'ensemble des surfaces émettant de l'énergie lumineuse.
-
-La quantité fondamentale utilisée en radiométrie est la fonction de radiance notée $L^{\rightarrow}$. Pour tout point de surface $x$ et toute direction $\Theta$ de l'hémisphère $\Omega_x$ centré sur la normale $N_x$ en $x$, la quantité $L(x \rightarrow \Theta)$ indique la quantité d'énergie lumineuse diffusée par le point $x$ dans la direction $\Theta$ par unité d'aire par unité d'angle solide par unité de temps.
-
-L'\oe il capte cette quantité, c'est pourquoi elle est fondamentale en informatique graphique. L'objectif du lancer de rayon est de calculer la valeur de cette fonction pour l'ensemble des points vus par la caméra.
-
-En théorie la fonction de radiance dépend également de la longueur d'onde. En illumination globale on travaille le plus souvent sur des triplets de couleur RGB. La radiance aura donc une valeur à 3 composantes.
-
-On peut définir deux quantité associées à la radiance  utiles pour la formalisation de l'algorithme du lancer de rayons:
-
-\begin{itemize}
-\item La radiance émise notée $L_e(x \rightarrow \Theta)$. Ce terme est non nul uniquement sur les sources de lumière. En pratique il est fourni au programme avec l'ensemble des surfaces lumineuses, par exemple à l'aide d'une texture.
-
-\item La radiance incidente notée $L^{\leftarrow}$. $L(x \leftarrow \Psi)$ représente la radiance arrivant en $x$ par la direction $\Psi \in \Omega_x$.
-\end{itemize}
-
-Une propriété importante utilisée par l'algorithme du lancer de rayon est la suivante: dans le vide, la radiance reste constante le long des lignes droites. Cela nous permet d'exprimer la radiance incidente en fonction de la radiance et de la fonction de lancer de rayon $r$:
+L'algorithme du lancer de rayon résout à chaque point d'impact l'équation du rendu:
 
 \begin{center}
 
 \begin{align*}
-r(x, \Psi) &= x + t_{min}\Psi \\
-t_{min} &= min\{ t \in [0, +\infty~ |~ \exists s \in \mathbb{S}, x + t\Psi \in s \}
+L(x \rightarrow \Theta) &= L_e(x \rightarrow \Theta) + L_r(x \rightarrow \Theta) \\
+L_r(x \rightarrow \Theta) &= \int_{\Psi \in \Omega_x} f_r(x, \Theta \leftrightarrow \Psi) L(x \leftarrow \Psi) cos(N_x, \Psi) d\omega_{\Psi} \\
 \end{align*}
+
+\end{center}
+
+Cette équation décrit la manière dont la lumière est réfléchie à chaque rebond.
+
+Le terme $L(x \rightarrow \Theta)$ représente la radiance en $x$ envoyée dans la direction $\Theta$. La radiance est une quantité radiométrique représentant la luminosité. C'est cette quantité qui est captée par l'\oe uil et qui doit être calculée pour chaque point de l'image vue par la caméra. L'équation du rendu exprime une idée simple et intuitive: la radiance du point $x$ dans la direction $\Theta$ est la somme de la radiance émise directement par $x$ ($L_e(x \rightarrow \Theta)$) et de la radiance réfléchie par $x$ ($L_r(x \rightarrow \Theta)$).
+
+La quantité $L_e(x \rightarrow \Theta)$ est la radiance émise. Elle est non nulle uniquement sur les sources de lumière et est fournie en entrée de l'algorithme pour chaque lumière.
+
+La radiance réfléchie $L_r(x \rightarrow \Theta)$ doit être calculée. Pour cela on intègre la radiance incidente $L(x \leftarrow \Psi)$ sur l'hémisphère $\Omega_x$ centré sur la normale $N_x$ en $x$. Avant d?être intégrée la radiance incidente est multipliée par le facteur $f_s(x, \Theta \leftrightarrow \Psi) = f_r(x, \Theta \leftrightarrow \Psi) cos(N_x, \Psi)$. La fonction $f_r$ est appelée fonction de réflectance bi-directionnelle (ou plus couramment BRDF pour "Bidirectional Reflectance Distribution Function"). Le terme $f_r(x, \Theta \leftrightarrow \Psi)$ exprime la proportion de réflechie dans la direction $\Theta$ lorsque elle atteint $x$ selon la direction $\Phi$. C'est une quantité qui dépend du matériau en $x$. En pratique on la calcule à partir de textures et d'un modèle de réflexion.
+
+Dans le vide la radiance reste constante le long des lignes droites. Cela permet d'exprimer la radiance incidente $L(x \leftarrow \Psi)$ en fonction de la radiance:
+
+\begin{center}
 
 \begin{equation*}
 L(x \leftarrow \Psi) = L(r(x, \Psi) \rightarrow -\Psi)
@@ -86,19 +82,9 @@ L(x \leftarrow \Psi) = L(r(x, \Psi) \rightarrow -\Psi)
 
 \end{center}
 
-La fonction de radiance est solution de l'équation du rendu:
+Le terme $r(x, \Psi)$ représente le point visible depuis $x$ dans la direction $\Phi$. En pratique on le calcule en lançant un rayon dans la scène et en cherchant l'intersection la plus proche.
 
-\begin{center}
-\begin{align*}
-L(x \rightarrow \Theta) &= L_e(x \rightarrow \Theta) + \int_{\Psi \in \Omega_x} f_r(x, \Theta \leftrightarrow \Psi) L(x \leftarrow \Psi) cos(N_x, \Psi) d\omega_{\Psi} \\
-L(x \rightarrow \Theta) &= L_e(x \rightarrow \Theta) + \int_{\Psi \in \Omega_x} f_r(x, \Theta \leftrightarrow \Psi) L(r(x, \Psi) \rightarrow -\Psi) cos(N_x, \Psi) d\omega_{\Psi} \\
-L(x \rightarrow \Theta) &= L_e(x \rightarrow \Theta) + L_r(x \rightarrow \Theta)
-\end{align*}
-\end{center}
-
-L'équation du rendu exprime une idée intuitive: la radiance renvoyée par $x$ dans la direction $Theta$ est la somme de la radiance émise par le point $x$ et de la radiance réfléchie. La radiance réfléchie $L_r(x \rightarrow \Theta)$ est calculée en intégrant la radiance incidente sur tout l'hémisphère de $x$ pondérée par un facteur $f_s(x, \Theta \leftrightarrow \Psi) = f_r(x, \Theta \leftrightarrow \Psi) cos(N_x, \Psi)$. La fonction $f_r$ est appelée fonction de réflectance bi-directionnelle (BRDF pour "Bidirectional Reflectance Distribution Function"). La valeur de cette fonction représente la proportion d'énergie échangée entre les direction $\Theta$ et $\Phi$ au point $x$. Elle dépend du matériaux constituant la surface contenant $x$ et est le plus souvent représentée par une texture fournie en entrée de l'algorithme.
-
-Cette équation nous permet en théorie de calculer la radiance en tout point de surface et pour toute direction. En pratique il n'existe pas de solution analytique et il est nécessaire d'utiliser des techniques d'approximation pour calculer la partie intégrale de l'équation. La méthode la plus utilisée est l'intégration de Monte-Carlo qui nous fournie un estimateur général pour le calcul des intégrales.
+L'équation du rendu nous permet en théorie de calculer la radiance en tout point de surface et pour toute direction. En pratique il n'existe pas de solution analytique et il est nécessaire d'utiliser des techniques d'approximation pour calculer la partie intégrale de l'équation. La méthode la plus utilisée est l'intégration de Monte-Carlo qui nous fourni un estimateur général pour le calcul des intégrales.
 
 \subsection{Intégration de Monte-Carlo}
 
