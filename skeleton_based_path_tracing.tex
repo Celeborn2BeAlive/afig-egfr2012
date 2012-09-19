@@ -205,9 +205,29 @@ La squeletisation du vide est composée de trois étapes:
 
 \end{itemize}
 
-La prochaine section décrit l'algorithme de pré-calcul utilisé. Le résultat de cet algorithme nous permet de construire une densité de probabilité adapté à l'échantillonnage en accord avec $L$.
+\subsection{Calcul des points d'importance}
 
-\subsection{}
+Soit $G = (V, E)$ le graphe représentant le squelette. Pour chaque n\oe ud $n \in V$ un point d'importance $imp_n$ est construit en direction de la lumière $L$. 
+
+Soit $n_L$ le n\oe ud le plus proche de la lumière. On commence par calculer un arbre des plus cours chemins de racine $n_L$. Pour cela on utilise l'algorithme de Dijkstra et une distance $d$ basée sur l'illumination. Soit $u = (u_1, u_2) \in E$ une arrête du graphe. Si le n\oe ud $u_2$ est visible depuis $n_L$ on fixe $d(u) = 1$, sinon $d(u) = 10$. Ainsi les chemins illuminés ont une distance associée plus courte et nous conduisent plus rapidement à la lumière. A l'issue de cette étape on possède pour chaque n\oe ud le plus court chemin vers le n\oe ud $n_L$.
+
+Soit $n$ un n\oe ud du graphe. On note $V(n)$ l'ensemble des n\oe uds visibles depuis $n$ le long du plus court chemin vers $n_L$. Le point d'importance $imp_n$ associé à $n$ est le barycentre de $V(n)$.
+
+\subsection{Utilisation des points d'importance}
+
+Les points d'importance sont utilisés pour échantillonner l'hémisphère $\Omega_x$ lors d'un rebond en $x$. Pour cela on récupère le n\oe ud $n$ le plus proche de $x$ (faisable en temps constant dans notre implantation en utilisant une grille 3D). On construit alors la direction d'importance $\vec{ximp_n}$ associée à $x$. La distribution utilisée est alors:
+
+\begin{center}
+
+\begin{equation*}
+p_{skel}(\Phi) = \frac{s + 2}{2\Pi} cos^s(\hat{\vec{ximp_n}, \Phi})
+\end{equation*}
+
+\end{center}
+
+\subsection{Résultats et discussion}
+
+\section{Échantillonage préférentiel multiple}
 
 %-------------------------------------------------------------------------
 \newpage
