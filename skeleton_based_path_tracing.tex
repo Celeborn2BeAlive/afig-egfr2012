@@ -1,0 +1,218 @@
+% Mettre un "%" devant le style à ne pas utiliser
+%\documentclass{refig} % style de la revue REFIG
+\documentclass{afig} % style des journées AFIG
+
+\usepackage[latin1]{inputenc} 
+\usepackage[frenchb]{babel} 
+\usepackage{t1enc,dfadobe}
+\usepackage{cite}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[ruled,vlined,linesnumbered]{algorithm2e}
+
+% for including postscript figures
+% mind: package option 'draft' will replace PS figure by a filename within a frame
+\ifpdf \usepackage[pdftex]{graphicx} \pdfcompresslevel=9
+\else \usepackage[dvips]{graphicx} \fi
+
+
+\title{Lancer de rayons guidé par le squelette}
+
+\author[L.NO\"{E}L J.CHAUSSARD V.BIRI M.COUPRIE]%
+	   {Laurent No\"{e}l $^2$,
+	    John Chaussard $^1$, 
+	    Venceslas Biri $^2$ and
+	    Michel Couprie $^2$ 
+	    \\
+		$^1$ Universit\'{e} Paris 13, Sorbonne Paris Cit\'{e}, LAGA, CNRS(UMR 7539), \\ F-93430, 			Villetaneuse, France \\ chaussard@math.univ-paris13.fr
+		\\
+		$^2$ Universit\'{e} Paris Est, LIGM, A3SI-ESIEE \\ 2, boulevard Blaise Pascal, 93162 				Noisy le Grand CEDEX, France \\ laurent.noel@esiee.fr, v.biri@esiee.fr, 							michel.couprie@esiee.fr}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+   Ceci est un résumé. Un résumé en anglais et en français est demandé.
+
+\end{abstract}
+\keywords{Informatique Graphique, Synthèse d'Images, Illumination Globale, Lancer de Rayons, Squelettisation}
+%-------------------------------------------------------------------------
+\section{Introduction}
+
+Nous présentons une nouvelle méthode d'échantillonage pour l'algorithme du lancer de rayons. Cette méthode est basé sur l'utilisation d'un squelette topologique curviligne du vide de la scène. Il nous permet de choisir des directions porteuses d'énergie lors d'un rebond.
+
+\section{Lancer de rayons}
+
+Le lancer de rayons est un algorithme de rendu utilisé en illumination globale. Il permet de générer des images photo-réalistes au prix d'un long temps de calcul.
+
+\subsection{Principe général}
+
+Le lancer de rayons fonctionne de la manière suivante: partant d'une caméra placé dans une scène virtuelle composée de surfaces et de lumière, on lancer un nombre $N$ de rayons à travers l'image virtuelle vue par la caméra. Ces rayons rebondissent dans la scène jusqu'à atteindre les lumières ou un maximum de rebonds fixé. Des chemins entre la caméra et les lumières sont ainsi crées et on calcule la quantité de lumière traversant chacun des chemins en se basant sur les propriétés des matériaux à chaque point d'impact. On obtient ainsi une couleur pour chaque rayon lancé. Les couleurs calculées sont utilisées pour reconstruire l'image finale.
+
+\subsection{Radiométrie}
+
+L'algorithme du lancé de rayon est entièrement basé sur les lois de la radiométrie. La radiométrie est le domaine qui étudie la mesure des rayonnements électromagnétiques, en particulier la lumière visible.
+
+Soit $\mathbb{S}$ une scène en trois dimensions dont les éléments sont des surfaces de $\mathbb{R}^3$ (ne se recouvrant pas). Soit $\mathbb{S}_L \subset S$ l'ensemble des lumières, c'est à dire l'ensemble des surfaces émettant de l'énergie lumineuse.
+
+La quantité fondamentale utilisée en radiométrie est la fonction de radiance notée $L^{\rightarrow}$. Pour tout point de surface $x$ et toute direction $\Theta$ de l'hémisphère $\Omega_x$ centré sur la normale $N_x$ en $x$, la quantité $L(x \rightarrow \Theta)$ indique la quantité d'énergie lumineuse diffusée par le point $x$ dans la direction $\Theta$ par unité d'aire par unité d'angle solide par unité de temps.
+
+L'\oe il capte cette quantité, c'est pourquoi elle est fondamentale en informatique graphique. L'objectif du lancer de rayon est de calculer la valeur de cette fonction pour l'ensemble des points vus par la caméra.
+
+En théorie la fonction de radiance dépend également de la longueur d'onde. En illumination globale on travaille le plus souvent sur des triplets de couleur RGB. La radiance aura donc une valeur à 3 composantes.
+
+On peut définir deux quantité associées à la radiance  utiles pour la formalisation de l'algorithme du lancer de rayons:
+
+\begin{itemize}
+\item La radiance émise notée $L_e(x \rightarrow \Theta)$. Ce terme est non nul uniquement sur les sources de lumière. En pratique il est fourni au programme avec l'ensemble des surfaces lumineuses, par exemple à l'aide d'une texture.
+
+\item La radiance incidente notée $L^{\leftarrow}$. $L(x \leftarrow \Psi)$ représente la radiance arrivant en $x$ par la direction $\Psi \in \Omega_x$.
+\end{itemize}
+
+Une propriété importante utilisée par l'algorithme du lancer de rayon est la suivante: dans le vide, la radiance reste constante le long des lignes droites. Cela nous permet d'exprimer la radiance incidente en fonction de la radiance et de la fonction de lancer de rayon $r$:
+
+\begin{center}
+
+\begin{align*}
+r(x, \Psi) &= x + t_{min}\Psi \\
+t_{min} &= min\{ t \in [0, +\infty~ |~ \exists s \in \mathbb{S}, x + t\Psi \in s \}
+\end{align*}
+
+\begin{equation*}
+L(x \leftarrow \Psi) = L(r(x, \Psi) \rightarrow -\Psi)
+\end{equation*}
+
+\end{center}
+
+La fonction de radiance est solution de l'équation du rendu:
+
+\begin{center}
+\begin{align*}
+L(x \rightarrow \Theta) &= L_e(x \rightarrow \Theta) + \int_{\Psi \in \Omega_x} f_r(x, \Theta \leftrightarrow \Psi) L(x \leftarrow \Psi) cos(N_x, \Psi) d\omega_{\Psi} \\
+L(x \rightarrow \Theta) &= L_e(x \rightarrow \Theta) + \int_{\Psi \in \Omega_x} f_r(x, \Theta \leftrightarrow \Psi) L(r(x, \Psi) \rightarrow -\Psi) cos(N_x, \Psi) d\omega_{\Psi} \\
+L(x \rightarrow \Theta) &= L_e(x \rightarrow \Theta) + L_r(x \rightarrow \Theta)
+\end{align*}
+\end{center}
+
+L'équation du rendu exprime une idée intuitive: la radiance renvoyée par $x$ dans la direction $Theta$ est la somme de la radiance émise par le point $x$ et de la radiance réfléchie. La radiance réfléchie $L_r(x \rightarrow \Theta)$ est calculée en intégrant la radiance incidente sur tout l'hémisphère de $x$ pondérée par un facteur $f_s(x, \Theta \leftrightarrow \Psi) = f_r(x, \Theta \leftrightarrow \Psi) cos(N_x, \Psi)$. La fonction $f_r$ est appelée fonction de réflectance bi-directionnelle (BRDF pour "Bidirectional Reflectance Distribution Function"). La valeur de cette fonction représente la proportion d'énergie échangée entre les direction $\Theta$ et $\Phi$ au point $x$. Elle dépend du matériaux constituant la surface contenant $x$ et est le plus souvent représentée par une texture fournie en entrée de l'algorithme.
+
+Cette équation nous permet en théorie de calculer la radiance en tout point de surface et pour toute direction. En pratique il n'existe pas de solution analytique et il est nécessaire d'utiliser des techniques d'approximation pour calculer la partie intégrale de l'équation. La méthode la plus utilisée est l'intégration de Monte-Carlo qui nous fournie un estimateur général pour le calcul des intégrales.
+
+\subsection{Intégration de Monte-Carlo}
+
+Soit $f$ une fonction définie sur un domaine $D$. On désire calculer l'intégrale de $f$ sur $D$:
+
+\begin{equation*}
+F = \int_{x \in D} f(x) dx
+\end{equation*}
+
+L'intégrateur de Monte-Carlo est basé sur une distribution de probabilité $p$ nous permettant échantillonner $D$. Soit $(x_i)_{i = 1...N}$ une famille d'échantillons indépendants distribués selon $p$. L'estimateur de Monte-Carlo est le suivant:
+
+\begin{equation*}
+\langle F \rangle = \frac{1}{N} \sum_{i = 1}^{N} \frac{f(x_i)}{p(x_i)}
+\end{equation*}
+
+Cet estimateur est non-biaisé: l?espérance $E[\langle F \rangle]$ est égal à $F$ quelque soit le nombre d'échantillons et quelque soit la distribution de probabilité utilisée $p$ à condition que $p(x)$ soit non nul pour tout $x$ dès que $f(x)$ est non nul.
+
+La variance $\sigma^2[\langle F \rangle]$ de l'estimateur nous permet d'évaluer son efficacité. On a:
+
+\begin{equation*}
+\sigma^2[\langle F \rangle] = \frac{1}{N}\int_{x \in D} (\frac{f(x)}{p(x)} - F) dx
+\end{equation*}
+
+Plus cette variance est faible, meilleure est l'efficacité de l'estimateur. La partie intégrale de l'équation est une constante. Ainsi en augmentant le nombre d'échantillons on diminue la variance.
+
+L'algorithme du lancer de rayon stochastique utilise cette méthode pour estimer l'intégrale $L_r(x \rightarrow \Theta)$ avec $f = \int_{\Psi \in \Omega_x} f_s(x, \Theta \leftrightarrow \Psi) L(r(x, \Psi) \rightarrow -\Psi)$. Malheureusement l'évaluation de l'intégrande entraîne un appel récursif de $L^{rightarrow}$. Cela nous impose de n'utiliser qu'un seul échantillon pour estimer l'intégrale afin que l'algorithme n'ai pas une complexité exponentielle. Une autre stratégie couramment utilisée pour réduire la variance est d'utiliser une distribution $p$ adaptée à la fonction à intégrer. Cette méthode est appelée échantillonage préférentiel (Importance Sampling). Elle sera décrite dans la section \ref{sec::skel_based_imp_sampling}.
+
+\subsection{Algorithme}
+
+L'algorithme \ref{algo::radiance_computation} décrit l'algorithme du calcul de la radiance. L'algorithme \ref{algo::image_computation} décrit comment calculer une image à partir du calcul de la radiance.
+
+\begin{algorithm}[tb]
+\label{algo::radiance_computation}
+\SetKwFor{ForAll}{for all}{do}{end}
+\caption[RadianceComputation]{Calcul de la radiance}
+\KwData{Un point $x$ de $\mathbb{R}^3$, une direction $\Theta$ de l'hemisphere $\Omega_x$} 
+\KwResult{$L(x \rightarrow \Theta)$}
+$L \gets L_e(x \rightarrow \Theta)$ \\
+\If{continuer la récursion}{
+	$\Phi \gets sample(\Omega_x, p)$ \\
+	$ L \gets L + \frac{f_s(x, \Theta \leftrightarrow \Phi) L(r(x, \Phi) \rightarrow -\Phi)}{p(\Phi)}$ \\
+}
+\Return $L$
+\end{algorithm}
+
+\begin{algorithm}[tb]
+\label{algo::image_computation}
+\SetKwFor{ForAll}{for all}{do}{end}
+\caption[ImageComputation]{Calcul d'une image}
+\KwData{Une largeur $L$, une hauteur $H$, Une camera $C$, un nombre de rayons par pixel $N$} 
+\KwResult{Une image $I$}
+$I \gets Image(L, H, noir)$ \\
+\ForAll{pixel $P \in I$}{
+	$L \gets noir$ \\
+	\For{$i = 1$ à $N$}{
+		$s \gets sample(P)$ \\
+		$\Phi \gets direction(C, s)$ \\
+		$ L \gets L + L(r(origine(C), \Phi) \rightarrow -\Phi)$ \\
+	} 
+	$I(P) \gets \frac{L}{N}$
+}
+\Return $I$
+\end{algorithm}
+
+\section{Échantillonnage préférentiel guidé par le squelette du vide}
+\label{sec::skel_based_imp_sampling}
+
+Le choix de la distribution $p$ est critique pour l'amélioration de la convergence de l'algorithme. Une distribution uniforme sur l'hémisphère ($p(\Phi) = \frac{1}{2\Pi}$) conduit généralement à de mauvais résultats. L?échantillonnage préférentiel consiste à choisir $p$ par rapport à la fonction à intégrer. Notre objectif est de construire cette distribution afin de choisir en priorité des directions porteuse d'énergie. Pour cela nous utilisons un squelette curviligne du vide de la scène. 
+
+\subsection{Échantillonnage préférentiel}
+
+Le choix d'une bonne distribution conduit à une réduction du bruit généré par le lancer de rayon. Une bonne distribution donne plus de chance aux échantillons ayant une forte valeur pour la fonction à intégrer. Dans l'algorithme du lancer de rayon, la fonction a intégrer est la suivante:
+
+\begin{equation*}
+f(\Phi) = f_s(x, \Theta \leftrightarrow \Phi) L(r(x, \Phi) \rightarrow -\Phi)
+\end{equation*}
+
+C'est un produit de deux fonctions. Il est plus difficile de choisir une distribution adaptée à un produit qu'a une fonction simple. La solution la plus utilisée en d?échantillonner en accord avec la fonction $f_s$. Ce choix se justifie par le fait que la fonction $f_s$ est souvent représentée par un modèle de réflexion et une texture. On peut donc utiliser cette donnée immédiatement, en temps constant. Au contraire l'évaluation du terme $L(r(x, \Phi) \rightarrow -\Phi)$ conduit à relancer la récursion, sa valeur n'est donc pas immédiatement accessible. Notre objectif est d'échantillonner l'hémisphère en accord avec ce terme. Sa valeur est forte lorsque $\Phi$ est une direction porteuse d'énergie lumineuse. Nous avons donc besoin d'un outil indiquant rapidement dans quelle direction se trouve la lumière.
+
+\subsection{Squelette du vide}
+
+La lumière se déplace dans le vide de la scène. En pré-calculant une approximation de la distribution de lumière dans ce vide nous pouvons avoir une indication sur les chemins de plus forte énergie. Pour que ce pré-calcul soit rapide, nous l'effectuons sur un squelette curviligne topologique du vide de la scène. Ce choix est justifié principalement par deux raisons:
+
+\begin{itemize}
+\item Un squelette topologique possède la m\^eme topologie que l'objet initial. Il est important de garder la m\^eme topologie que le vide afin de ne pas emprunter des chemins inexistant (passant à travers les murs)
+
+\item Un squelette curviligne est un objet à une dimension. Cela nous permet de le représenter à l'aide d'un graphe composé d'un nombre de n\oe uds réduit. Ainsi nos pré-calculs sont rapides.
+
+\end{itemize}
+
+La squeletisation du vide est composée de trois étapes:
+
+\begin{itemize}
+\item Voxelisation de la scène puis inversion. L'inversion est nécessaire afin d'avoir la voxelisation du vide.
+
+\item Squeletisation à partir de la voxelisation dans le cadre des cubiques complexes. Un cubique complexe est un autre type de représentation discrète que les voxels permettant de s'assurer que le squelette obtenue possède bien une seule dimension.
+
+\item Conversion du squelette (représenté par un cubique complexe) en un graphe dont les n\oe uds sont des points de $\mathbb{R}^3$ et dont les arr\^etes encodent la topologie de la scène. 
+
+\end{itemize}
+
+La prochaine section décrit l'algorithme de pré-calcul utilisé. Le résultat de cet algorithme nous permet de construire une densité de probabilité adapté à l'échantillonnage en accord avec $L$.
+
+\subsection{}
+
+%-------------------------------------------------------------------------
+\newpage
+
+%\bibliographystyle{refig-alpha}
+%\bibliography{bibsample}
+
+%-------------------------------------------------------------------------
+
+
+
+
+\end{document}
