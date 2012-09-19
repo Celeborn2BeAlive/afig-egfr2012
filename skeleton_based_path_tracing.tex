@@ -244,13 +244,60 @@ Plusieurs cas pathologiques peuvent nous conduire à nous rabattre sur un échanti
 
 \section{Échantillonnage préférentiel multiple}
 
-Comme nous l'avons évoqué dans la section précédente, notre méthode conduit à l'apparition de speckles. Le fait d'ignorer totalement la BRDF au moment d'échantillonner est une des causes de l'apparition de cet artefact. Nous proposons d'utiliser une méthode appelée échantillonnage préférentiel multiple pour prendre en compte à la fois notre stratégie et une stratégie basée sur la BRDF.
+Comme nous l'avons évoqué dans la section précédente, notre méthode conduit à l'apparition de speckles. Le fait d'ignorer totalement la BRDF au moment d'échantillonner est une des causes de l'apparition de cet artefact. Nous proposons d'utiliser une méthode appelée échantillonnage préférentiel multiple (MIS pour Multiple Importance Sampling) pour prendre en compte à la fois notre stratégie et une stratégie basée sur la BRDF.
 
-\subsection{Description de la méthode}
+\subsection{Cadre théorique}
+
+Le MIS est une technique utilisée pour échantillonner efficacement en accord avec des produit de fonctions comme c'est le cas pour le lancer de rayons. L'idée est d'utiliser une densité de probabilité construite à partir de la combinaison de plusieurs densité adaptées à chacun des facteurs de la fonction.
+
+Soit $f(x) = f_1(x)f_2(x)...f_n(x)$ une fonction à intégrer sur un domaine $D$. Soit $p_1, ..., p_n$ les densités de probabilités adaptées à chacune des fonctions $f_i$.
+L'estimateur combiné pour l'intégrale de $f$ est:
+
+\begin{equation*}
+\langle F \rangle = \frac{\omega_I(X_I)f(X_I)}{c_Ip_I(X_I)}, I = min\{i~ |~ U < \sum_{j=1}^{i} c_j \}
+\end{equation*}
+
+Les $\omega_i$ sont des fonctions de pondération positives telles que $\sum_i \omega_i = 1$ et les $c_i$ des probabilités associées à chacune des fonctions $f_i$. Le réel $U$ est choisie aléatoirement et uniformément dans l'intervalle $[0,1]$. Cet estimateur est non biaisé et permet de construire une famille de stratégies d'échantillonnage en modifiant les $\omega_i$ et les $c_i$.
+
+L'idée derrière cet estimateur est simple: on choisit aléatoirement une stratégie $p_I$ en se basant sur les probabilités $c_i$. Cette stratégie est utilisée pour tirer un échantillon $X_I$. Cet échantillon est alors utilisé pour calculer l'estimation.
+
+Lorsque l'on utilise un seul échantillon, comme c'est le cas en lancer de rayons, il a été démontré que les fonctions de pondération suivantes sont optimales (en terme de variance):
+
+\begin{equation*}
+\hat{\omega}_i(x) = \frac{c_ip_i(x)}{\sum_j c_jp_j(x)}
+\end{equation*}
+
+L'utilisation de ces fonctions conduit à l'estimateur suivant appelée "balance heuristic":
+
+\begin{equation*}
+\langle F \rangle = \frac{f(X_I)}{\sum_i c_ip_i(X_I)}, I = min\{i~ |~ U < \sum_{j=1}^{i} c_j \}
+\end{equation*}
+
+\subsection{Utilisation de la méthode}
+
+Dans le cas du lancer de rayon la fonction a intégrer est:
+
+\begin{equation*}
+f(\Phi) = f_s(x, \Theta \leftrightarrow \Phi) L(x \leftarrow \Phi)
+\end{equation*}
+
+Notre méthode nous à conduit à la densité $p_{skel}$ pour échantillonner en accord avec $L$. Un grand nombre de stratégies ont été étudiées pour échantillonner efficacement en accord avec $f_s$ en fonction du modèle de réflexion utilisé. N'importe quelle densité $p_s$ adaptée à $f_s$ peut être utilisée. L'estimateur est alors le suivant:
+
+\begin{equation*}
+\langle L_r(x \rightarrow \Theta) \rangle = \frac{f_s(x, \Theta \leftrightarrow \Phi) L(x \leftarrow \Phi)}{c_{skel}p_{skel}(\Phi) + (1 - c_{skel})p_s(\Phi)}
+\end{equation*}
+
+La direction $\Phi$ est échantillonnée avec la densité choisie uniformément selon les probabilités $c_{skel}$ et $1 - c_{skel}$.
+
+Le paramètre $c_{skel}$ peut être fixé ou bien être calculé en fonction du point $x$ (par rapport à la distance à la lumière par exemple).
 
 \subsection{Résultats et discussion}
 
-\section{Conclusion}
+
+
+\section{Conclusion et travaux futurs}
+
+
 
 %-------------------------------------------------------------------------
 \newpage
