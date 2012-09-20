@@ -6,6 +6,7 @@
 \usepackage[frenchb]{babel} 
 \usepackage{t1enc,dfadobe}
 \usepackage{cite}
+\usepackage{color}
 
 \usepackage{amsmath}
 \usepackage{amssymb}
@@ -16,6 +17,14 @@
 \ifpdf \usepackage[pdftex]{graphicx} \pdfcompresslevel=9
 \else \usepackage[dvips]{graphicx} \fi
 
+\def\figpath{images}
+\def\myincludegraphics#1#2{\includegraphics[width=#1]{\figpath/#2}}
+% ------------------------------------------------------------------------
+% New commands
+\newcommand{\red}[1]{\textcolor{red}{#1}} 				% Means CORRECTION have been done. To check
+\newcommand{\blue}[1]{\textcolor{blue}{#1}}				% Means SENTENCE is weird. To be reformulated
+\newcommand{\purple}[1]{\textcolor{magenta}{#1}}			% Means COMMENTS
+% ------------------------------------------------------------------------
 
 \title{Lancer de rayons guidé par le squelette}
 
@@ -37,71 +46,62 @@
    Ceci est un résumé. Un résumé en anglais et en français est demandé.
 
 \end{abstract}
-\keywords{Informatique Graphique, Synthèse d'Images, Illumination Globale, Lancer de Rayons, Squelettisation}
+\keywords{Synthèse d'Images, Illumination Globale, Lancer de Rayons, Squelettisation}
 %-------------------------------------------------------------------------
+\begin{figure*}[t!]
+\begin{center}
+\begin{tabular}{cc}
+	\myincludegraphics{0.60\textwidth}{dgci_ray_corridor.png} &
+	\myincludegraphics{0.40\textwidth}{dgci_compare_door.png}
+\end{tabular}
+\caption{\label{fig::intro_image} Regardez comment les rayons s'orientent vers les parties éclairées de la scène gr\^ace à notre skelette curviligne( image $b$), comparé à l'algorithme classique du lancer de rayon (image $a$). Les images $c$ et $d$ montrent la réduction du bruit obtenu par le \emph{path tracing} classique ($c$) et notre méthode ($d$).}
+\end{center}
+\end{figure*}
+
 \section{Introduction}
 
 Nous présentons une nouvelle méthode d'échantillonage pour l'algorithme du lancer de rayons. Cette méthode est basé sur l'utilisation d'un squelette topologique curviligne du vide de la scène. Il nous permet de choisir des directions porteuses d'énergie lors d'un rebond.
 
 \section{Lancer de rayons}
 
-Le lancer de rayons est un algorithme de rendu utilisé en illumination globale. Il permet de générer des images photo-réalistes au prix d'un long temps de calcul.
+Le lancer de rayons ou \emph{path tracing} est un algorithme de rendu utilisé en illumination globale. Il vise à générer des images photo-réalistes en mimant le comportement et les trajets de la lumière, au prix d'un temps de calcul relativement long. 
 
 \subsection{Principe général}
-
+\purple{A RESUME}.
 Le lancer de rayons fonctionne de la manière suivante: partant d'une caméra placé dans une scène virtuelle composée de surfaces et de lumière, on lance des rayons à travers l'image virtuelle vue par la caméra. Ces rayons rebondissent dans la scène jusqu'à atteindre les lumières ou un maximum de rebonds fixé. Des chemins entre la caméra et les lumières sont ainsi crées et on calcule la quantité de lumière traversant chacun des chemins en se basant sur les propriétés des matériaux à chaque point d'impact. On obtient ainsi une couleur pour chaque rayon lancé. Les couleurs calculées sont utilisées pour reconstruire l'image finale.
 
 \subsection{Équation du rendu}
 
-L'algorithme du lancer de rayon résout à chaque point d'impact l'équation du rendu:
-
-\begin{center}
-
+L'algorithme du lancer de rayon résout à chaque point d'impact entre un rayon et une surface, l'équation du rendu~\cite{Kaj86}. Elle décrit la manière dont la lumière est réfléchie à chaque rebond.
 \begin{equation*}
 L(x \rightarrow \Theta) = L_e(x \rightarrow \Theta) + L_r(x \rightarrow \Theta)
 \end{equation*}
-
-\end{center}
-
-\begin{center}
-
 \begin{equation*}
 L_r(x \rightarrow \Theta) = \int_{\Phi \in \Omega_x} f_r(x, \Theta \leftrightarrow \Phi) L(x \leftarrow \Phi) cos(N_x, \Phi) d\omega_{\Phi}
 \end{equation*}
 
-\end{center}
+Le terme $L(x \rightarrow \Theta)$ représente la radiance en $x$ envoyée dans la direction $\Theta$, quantité devant être calculée pour chaque point de l'image vue par la caméra. En fait, l'équation du rendu exprime une idée simple et intuitive~: la radiance du point $x$ dans la direction $\Theta$ est la somme de la radiance émise directement par $x$ ($L_e(x \rightarrow \Theta)$) et de la radiance réfléchie par $x$ ($L_r(x \rightarrow \Theta)$). La quantité $L_e(x \rightarrow \Theta)$ est la radiance émise. Elle est non nulle uniquement sur les sources de lumière et est fournie en entrée de l'algorithme pour chaque lumière.
 
-Cette équation décrit la manière dont la lumière est réfléchie à chaque rebond.
+\purple{INSERER UN SCHEMA}
+La radiance réfléchie $L_r(x \rightarrow \Theta)$ doit être calculée. Pour cela on intègre la radiance incidente $L(x \leftarrow \Phi)$ sur l'hémisphère $\Omega_x$ centré sur la normale $N_x$ en $x$. Avant d'être intégrée la radiance incidente est multipliée par le facteur $f_s(x, \Theta \leftrightarrow \Phi) = f_r(x, \Theta \leftrightarrow \Phi) cos(N_x, \Phi)$. La fonction $f_r$ est appelée fonction de réflectance bi-directionnelle (ou plus couramment BRDF pour "Bidirectional Reflectance Distribution Function"). Le terme $f_r(x, \Theta \leftrightarrow \Phi)$ exprime la proportion de réflechie dans la direction $\Theta$ lorsque elle atteint $x$ selon la direction $\Phi$. C'est une quantité qui dépend du matériau en $x$. En pratique on la calcule à partir d'un modèle de réflexion et éventuellement de textures. % Tu peux aussi décrire le cosinus.
 
-Le terme $L(x \rightarrow \Theta)$ représente la radiance en $x$ envoyée dans la direction $\Theta$. La radiance est une quantité radiométrique représentant la luminosité. C'est cette quantité qui est captée par l'\oe uil et qui doit être calculée pour chaque point de l'image vue par la caméra. L'équation du rendu exprime une idée simple et intuitive: la radiance du point $x$ dans la direction $\Theta$ est la somme de la radiance émise directement par $x$ ($L_e(x \rightarrow \Theta)$) et de la radiance réfléchie par $x$ ($L_r(x \rightarrow \Theta)$).
-
-La quantité $L_e(x \rightarrow \Theta)$ est la radiance émise. Elle est non nulle uniquement sur les sources de lumière et est fournie en entrée de l'algorithme pour chaque lumière.
-
-La radiance réfléchie $L_r(x \rightarrow \Theta)$ doit être calculée. Pour cela on intègre la radiance incidente $L(x \leftarrow \Phi)$ sur l'hémisphère $\Omega_x$ centré sur la normale $N_x$ en $x$. Avant d?être intégrée la radiance incidente est multipliée par le facteur $f_s(x, \Theta \leftrightarrow \Phi) = f_r(x, \Theta \leftrightarrow \Phi) cos(N_x, \Phi)$. La fonction $f_r$ est appelée fonction de réflectance bi-directionnelle (ou plus couramment BRDF pour "Bidirectional Reflectance Distribution Function"). Le terme $f_r(x, \Theta \leftrightarrow \Phi)$ exprime la proportion de réflechie dans la direction $\Theta$ lorsque elle atteint $x$ selon la direction $\Phi$. C'est une quantité qui dépend du matériau en $x$. En pratique on la calcule à partir de textures et d'un modèle de réflexion.
-
-Dans le vide la radiance reste constante le long des lignes droites. Cela permet d'exprimer la radiance incidente $L(x \leftarrow \Phi)$ en fonction de la radiance:
-
-\begin{center}
-
+Dans le vide la radiance reste constante le long des lignes droites ce qui nous permet d'exprimer la radiance incidente $L(x \leftarrow \Phi)$ en fonction de la radiance:
 \begin{equation*}
 L(x \leftarrow \Phi) = L(r(x, \Phi) \rightarrow -\Phi)
 \end{equation*}
 
-\end{center}
-
 Le terme $r(x, \Phi)$ représente le point visible depuis $x$ dans la direction $\Phi$. En pratique on le calcule en lançant un rayon dans la scène et en cherchant l'intersection la plus proche.
 
-L'équation du rendu nous permet en théorie de calculer la radiance en tout point de surface et pour toute direction. En pratique il n'existe pas de solution analytique et il est nécessaire d'utiliser des techniques d'approximation pour calculer la partie intégrale de l'équation. La méthode la plus utilisée est l'intégration de Monte-Carlo qui nous fourni un estimateur général pour le calcul des intégrales.
+L'équation du rendu nous permet en théorie de calculer la radiance en tout point de surface et pour toute direction. En pratique, il n'existe pas de solution analytique et il est nécessaire d'utiliser des techniques d'approximation numérique pour calculer la partie intégrale de l'équation. La méthode la plus utilisée est l'intégration de Monte-Carlo qui nous fourni un estimateur général pour le calcul des intégrales.
 
 \subsection{Intégration de Monte-Carlo}
 
 Soit $f$ une fonction définie sur un domaine $D$. On désire calculer l'intégrale de $f$ sur $D$:
-
 \begin{equation*}
 F = \int_{x \in D} f(x) dx
 \end{equation*}
 
-L'intégrateur de Monte-Carlo est basé sur une distribution de probabilité $p$ nous permettant échantillonner $D$. Soit $(x_i)_{i = 1...N}$ une famille d'échantillons indépendants et distribués selon $p$. L'estimateur de Monte-Carlo est le suivant:
+L'intégrateur de Monte-Carlo est fondé sur une distribution de probabilité $p$ nous permettant échantillonner $D$. Soit $(x_i)_{i = 1...N}$ une famille d'échantillons indépendants et distribués selon $p$. L'estimateur de Monte-Carlo est le suivant:
 
 \begin{equation*}
 \langle F \rangle = \frac{1}{N} \sum_{i = 1}^{N} \frac{f(x_i)}{p(x_i)}
@@ -115,7 +115,7 @@ La variance $\sigma^2[\langle F \rangle]$ de l'estimateur nous permet d'évaluer 
 \sigma^2[\langle F \rangle] = \frac{1}{N}\int_{x \in D} (\frac{f(x)}{p(x)} - F) dx
 \end{equation*}
 
-Plus cette variance est faible, meilleure est l'efficacité de l'estimateur. La partie intégrale de l'équation est une constante. Ainsi en augmentant le nombre d'échantillons on diminue la variance.
+Plus cette variance est faible, meilleure est l'efficacité de l'estimateur. La partie intégrale de l'équation étant une constante, en augmentant le nombre d'échantillons on diminue la variance.
 
 L'algorithme du lancer de rayon stochastique utilise cette méthode pour estimer l'intégrale $L_r(x \rightarrow \Theta)$ avec $f(\Phi) = f_s(x, \Theta \leftrightarrow \Phi) L(r(x, \Phi) \rightarrow -\Phi)$. Malheureusement l'évaluation de l'intégrande entraîne un appel récursif de $L$. Cela nous impose de n'utiliser qu'un seul échantillon afin que l'algorithme n'ait pas une complexité exponentielle. L'estimateur utilisé en lancer de rayon est donc:
 
@@ -126,57 +126,57 @@ L'algorithme du lancer de rayon stochastique utilise cette méthode pour estimer 
 \subsection{Échantillonnage préférentiel}
 \label{sec::importance_sampling}
 
-Une stratégie couramment utilisée pour réduire la variance de l'estimateur est d'utiliser une distribution $p$ adaptée à la fonction à intégrer. Cette méthode est appelée échantillonage préférentiel (Importance Sampling).
+Une stratégie couramment utilisée pour réduire la variance de l'estimateur est d'utiliser une distribution $p$ adaptée à la fonction à intégrer. Cette méthode est appelée échantillonage préférentiel ou \emph{importance sampling}.\purple{t'es s\^ur de la traduction ?}
 
-Une distribution uniforme sur l'hémisphère ($p(\Phi) = \frac{1}{2\pi}$) conduit généralement à de mauvais résultats: lorsque peu de rayons sont lancés l'image de sortie est très bruitée. Cela est du au fait que toutes les directions sont traitées de la meme manière. Or l'intégrande est très faible pour certaines directions (par exemple les directions rasantes, le cosinus avec la normale étant nul; ou les directions n'apportant que peu d'énergie). Une bonne distribution doit donner plus de chances d'être choisi aux directions pour lesquelles l'intégrande est forte. Cela conduit à une réduction du bruit et une convergence plus rapide vers la véritable image.
+Une distribution uniforme sur l'hémisphère ($p(\Phi) = \frac{1}{2\pi}$) conduit généralement à de mauvais résultats: lorsque peu de rayons sont lancés l'image de sortie est très bruitée. Cela est d\^u au fait que toutes les directions sont traitées de la m\^eme manière. Or l'intégrande est très faible pour certaines directions (par exemple les directions rasantes, le cosinus avec la normale étant nul; ou les directions n'apportant que peu d'énergie). Une bonne distribution doit donner aux directions, pour lesquelles l'intégrande est forte, plus de chances d'être choisies. Cela conduit à une réduction du bruit et une convergence plus rapide vers la véritable image.
 
 Dans l'algorithme du lancer de rayon, la fonction a intégrer est un produit de deux fonctions:
-
+\purple{Rajoute le cosinus !!}
 \begin{equation*}
 f(\Phi) = f_s(x, \Theta \leftrightarrow \Phi) L(r(x, \Phi) \rightarrow -\Phi)
 \end{equation*}
 
-Malheureusement il est plus difficile de choisir une distribution adaptée à un produit qu'a une fonction simple. La solution la plus couramment utilisée est d?échantillonner en accord avec la fonction $f_s$. Ce choix se justifie par le fait que la fonction $f_s$ est souvent représentée par un modèle de réflexion et des textures. On peut donc utiliser cette donnée immédiatement: l'évaluation du terme $f_s(x, \Theta \leftrightarrow \Phi)$ peut se faire en temps constant. Au contraire l'évaluation du terme $L(r(x, \Phi) \rightarrow -\Phi)$ conduit à relancer la récursion, sa valeur n'est donc pas immédiatement accessible.
+Malheureusement il est plus difficile de choisir une distribution adaptée à un produit qu'à une fonction simple. La solution la plus couramment utilisée est d'échantillonner en accord avec la fonction $f_s$. Ce choix se justifie par le fait que la fonction $f_s$ est souvent représentée par un modèle connu de réflexion et des textures. On peut donc utiliser cette donnée immédiatement, l'évaluation du terme $f_s(x, \Theta \leftrightarrow \Phi)$ se faisant en temps constant. Au contraire l'évaluation du terme $L(r(x, \Phi) \rightarrow -\Phi)$ conduit à relancer la récursion, sa valeur n'est donc pas immédiatement accessible.
 
 Notre méthode conduit à la construction d'une distribution adaptée au terme $L(r(x, \Phi) \rightarrow -\Phi)$. La procédure est détaillée dans la section \ref{sec::skel_based_imp_sampling}.
-
-\subsection{Algorithme}
-
-L'algorithme \ref{algo::image_computation} décrit comment calculer une image à partir du calcul de la radiance. Le calcul de la radiance se fait en utilisant l'algorithme \ref{algo::radiance_computation}.
-
-\begin{algorithm}[tbh!]
-\label{algo::image_computation}
-\SetKwFor{ForAll}{for all}{do}{end}
-\caption[ImageComputation]{Calcul d'une image}
-\KwData{Une largeur $L$, une hauteur $H$, Une camera $C$, un nombre de rayons par pixel $N$} 
-\KwResult{Une image $I$}
-$I \gets Image(L, H, noir)$ \\
-\ForAll{pixel $P \in I$}{
-	$L \gets noir$ \\
-	\For{$i = 1$ à $N$}{
-		$s \gets sample(P)$ \\
-		$\Phi \gets direction(C, s)$ \\
-		$ L \gets L + L(r(origine(C), \Phi) \rightarrow -\Phi)$ \\
-	} 
-	$I(P) \gets \frac{L}{N}$
-}
-\Return $I$
-\end{algorithm}
-
-\begin{algorithm}[tbh!]
-\label{algo::radiance_computation}
-\SetKwFor{ForAll}{for all}{do}{end}
-\caption[RadianceComputation]{Calcul de la radiance}
-\KwData{Un point $x$ de $\mathbb{R}^3$, une direction $\Theta$ de l'hemisphere $\Omega_x$} 
-\KwResult{$L(x \rightarrow \Theta)$}
-$L \gets L_e(x \rightarrow \Theta)$ \\
-\If{continuer la récursion}{
-	$\Phi \gets sample(\Omega_x, p)$ \\
-	$ L \gets L + \frac{f_s(x, \Theta \leftrightarrow \Phi) L(r(x, \Phi) \rightarrow -\Phi)}{p(\Phi)}$ \\
-}
-\Return $L$
-\end{algorithm}
-
+%
+%\subsection{Algorithme}
+%
+%L'algorithme \ref{algo::image_computation} décrit comment calculer une image à partir du calcul de la radiance. Le calcul de la radiance se fait en utilisant l'algorithme \ref{algo::radiance_computation}.
+%
+%\begin{algorithm}[tbh!]
+%\label{algo::image_computation}
+%\SetKwFor{ForAll}{for all}{do}{end}
+%\caption[ImageComputation]{Calcul d'une image}
+%\KwData{Une largeur $L$, une hauteur $H$, Une camera $C$, un nombre de rayons par pixel $N$} 
+%\KwResult{Une image $I$}
+%$I \gets Image(L, H, noir)$ \\
+%\ForAll{pixel $P \in I$}{
+%	$L \gets noir$ \\
+%	\For{$i = 1$ à $N$}{
+%		$s \gets sample(P)$ \\
+%		$\Phi \gets direction(C, s)$ \\
+%		$ L \gets L + L(r(origine(C), \Phi) \rightarrow -\Phi)$ \\
+%	} 
+%	$I(P) \gets \frac{L}{N}$
+%}
+%\Return $I$
+%\end{algorithm}
+%
+%\begin{algorithm}[tbh!]
+%\label{algo::radiance_computation}
+%\SetKwFor{ForAll}{for all}{do}{end}
+%\caption[RadianceComputation]{Calcul de la radiance}
+%\KwData{Un point $x$ de $\mathbb{R}^3$, une direction $\Theta$ de l'hemisphere $\Omega_x$} 
+%\KwResult{$L(x \rightarrow \Theta)$}
+%$L \gets L_e(x \rightarrow \Theta)$ \\
+%\If{continuer la récursion}{
+%	$\Phi \gets sample(\Omega_x, p)$ \\
+%	$ L \gets L + \frac{f_s(x, \Theta \leftrightarrow \Phi) L(r(x, \Phi) \rightarrow -\Phi)}{p(\Phi)}$ \\
+%}
+%\Return $L$
+%\end{algorithm}
+%
 
 \section{Échantillonnage préférentiel guidé par le squelette du vide}
 \label{sec::skel_based_imp_sampling}
@@ -194,10 +194,10 @@ La lumière se déplace dans le vide de la scène. En pré-calculant une approximati
 
 \end{itemize}
 
-La squeletisation du vide est composée de trois étapes:
+\noindent La squeletisation du vide est composée de trois étapes:
 
 \begin{itemize}
-\item La première étape consiste à voxeliser la scène puis à inverser le résultat (les voxels pleins deviennent vides et inversement). L'inversion est nécessaire afin d'avoir une voxelisation du vide.
+\item La première étape consiste à voxeliser la scène puis à inverser le résultat (les voxels pleins deviennent vides et inversement). L'inversion est nécessaire afin d'avoir une voxelisation du vide. Une telle voxelisation binaire peut se faire très rapidement~\cite{FBP09}.
 
 \item La deuxième étape est la squeletisation. L'algorithme ne travaille pas directement sur les voxels mais sur une représentation intermédiaire appelée cubique complexe. Un cubique complexe est un autre type de représentation discrète permettant de s'assurer que le squelette obtenue possède bien une seule dimension. Les algorithmes de squeletisation travaillant sur les voxels ne garantissent pas ce résultat.
 
@@ -302,8 +302,8 @@ Le paramètre $c_{skel}$ peut être fixé ou bien être calculé en fonction du point
 %-------------------------------------------------------------------------
 \newpage
 
-%\bibliographystyle{refig-alpha}
-%\bibliography{bibsample}
+\bibliographystyle{refig-alpha}
+\bibliography{skeleton_based_path_tracing}
 
 %-------------------------------------------------------------------------
 
