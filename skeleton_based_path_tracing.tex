@@ -183,30 +183,28 @@ Notre méthode conduit à la construction d'une distribution adaptée au terme $L(r
 
 Comme nous l'avons évoqué dans la section \ref{sec::importance_sampling}, notre objectif est de construire une densité de probabilité permettant d'échantillonner préférentiellement les directions porteuses d'énergie, c'est à dire les directions $\Phi$ pour lesquelles le terme $L(x \leftarrow \Phi)$ est fort. Notre méthode utilise un squelette topologique du vide de la scène pour identifier les chemins porteurs d'énergie. Ce squelette est pré-traité pour construire en ensemble de points d'importance. Ces points sont fournis en entrée de l'algorithme de lancer de rayons et nous permettent à chaque rebond de construire une distribution nous faisant rebondir vers eux.
 
-\subsection{Squelette du vide}
-
-La lumière se déplace dans le vide de la scène. En pré-calculant une approximation de la distribution de lumière dans ce vide nous pouvons avoir une indication sur les chemins de plus forte énergie. Pour que ce pré-calcul soit rapide, nous l'effectuons sur un squelette curviligne topologique du vide de la scène. Ce choix est justifié principalement par deux raisons:
-
+\blue{La lumière se déplace dans le vide de la scène. En pré-calculant une approximation de la distribution de lumière dans ce vide nous pouvons avoir une indication sur les chemins de plus forte énergie.} Pour que ce pré-calcul soit rapide, nous l'effectuons sur un squelette curviligne topologique du vide de la scène. Ce choix est justifié principalement par deux raisons:
 \begin{itemize}
 \item Un squelette topologique possède la m\^eme topologie que l'objet initial. Il est important de garder la m\^eme topologie que le vide afin de ne pas emprunter des chemins inexistant (passant à travers les murs).
 
-\item Un squelette curviligne est un objet à une dimension. Cela nous permet de le représenter à l'aide d'un graphe composé d'un nombre de n\oe uds réduit. Nous avons ainsi une représentation légère en mémoire et les pré-calculs sont rapides.
-
+\item Un squelette curviligne est un objet à une dimension. Cela nous permet de le représenter à l'aide d'un graphe composé d'un nombre de n{\oe}uds réduit. Nous avons ainsi une représentation légère en mémoire et les pré-calculs sont rapides.
 \end{itemize}
 
-\noindent La squeletisation du vide est composée de trois étapes:
+\subsection{Voxelisation et squelettisation \purple{SECTION A TRADUIRE}}
+La première étape consiste à voxeliser la scène puis à inverser le résultat (les voxels pleins deviennent vides et inversement). L'inversion est nécessaire afin d'avoir une voxelisation du vide. Une telle voxelisation binaire peut se faire très rapidement~\cite{FBP09}.
 
-\begin{itemize}
-\item La première étape consiste à voxeliser la scène puis à inverser le résultat (les voxels pleins deviennent vides et inversement). L'inversion est nécessaire afin d'avoir une voxelisation du vide. Une telle voxelisation binaire peut se faire très rapidement~\cite{FBP09}.
+A skeleton of an object $X$ is a subset of points of $X$ that possesses the same \textit{topology} of $X$, that is, in 3d, the same number of connected components, holes and cavities. Moreover, a skeleton of $X$ should be centered in $X$ and at most two-dimensional. Some works on skeletonization focus on obtaining a skeleton which \textit{looks like} the object : in this case, the difficulty lies in obtaining a skeleton devoided of spurious elements, which can be seen as noise.
 
-\item La deuxième étape est la squeletisation. L'algorithme ne travaille pas directement sur les voxels mais sur une représentation intermédiaire appelée cubique complexe. Un cubique complexe est un autre type de représentation discrète permettant de s'assurer que le squelette obtenue possède bien une seule dimension. Les algorithmes de squeletisation travaillant sur les voxels ne garantissent pas ce résultat.
+Recent works on skeletonization use the cubical complex framework in order to obtain robust skeletons \cite{BC06a}. We use the skeletonization method presented in \cite{CC09}, which takes as input a voxel object and produces a thin and centered cubical complex skeleton. We modified the algorithm in order to only keep 1d elements in the output, thus producing a curvilinear skeleton.
 
-\item La dernière étape consiste à convertir le squelette obtenu (représenté par un cubique complexe) en un graphe dont les n\oe uds sont des points de $\mathbb{R}^3$ et dont les arr\^etes encodent la topologie de la scène. 
+The skeleton is filtered using our technique explained in \cite{Chaussard_phd}, which requires no user input: during the skeletonization, we calculate the lifespan of each point of the object (the number of iterations necessary to remove a point from the skeleton). We also compute for each point $p$ of the object, the size of the biggest ball included in the object and containing $p$ (called opening value of $p$). The filtering consists in keeping, during skeletonization, all points whose lifespan is superior to their opening value. This provides a noise robust skeleton relevant of the object visual aspect.
 
-\end{itemize}
+La dernière étape consiste à convertir le squelette obtenu (représenté par un cubique complexe) en un graphe dont les n\oe uds sont des points de $\mathbb{R}^3$ et dont les arr\^etes encodent la topologie de la scène. 
+\purple{DETAILLE MIEUX, RAJOUTE L'HISTOIRE DE LA GRILLE 3D QUI NOUS PERMET D'AVOIR EN TEMPS CONSTANT ACCES pour tout point de la scène au plus proche point du squelette}
 
 \subsection{Calcul des points d'importance}
 
+\purple{INSERE UN SCHEMA}
 Soit $G = (V, E)$ le graphe représentant le squelette. Pour chaque n\oe ud $n \in V$ un point d'importance $imp_n$ est construit en direction de la lumière $L$. 
 
 Soit $n_L$ le n\oe ud le plus proche de la lumière. On commence par calculer un arbre des plus cours chemins de racine $n_L$. Pour cela on utilise l'algorithme de Dijkstra et une distance $d$ basée sur l'illumination. Soit $u = (u_1, u_2) \in E$ une arrête du graphe. Si le n\oe ud $u_2$ est visible depuis $n_L$ on fixe $d(u) = 1$, sinon $d(u) = 10$. Ainsi les chemins illuminés ont une distance associée plus courte et nous conduisent plus rapidement à la lumière. A l'issue de cette étape on possède pour chaque n\oe ud le plus court chemin vers le n\oe ud $n_L$.
@@ -217,38 +215,46 @@ Soit $n$ un n\oe ud du graphe. On note $V(n)$ l'ensemble des n\oe uds visibles d
 
 Les points d'importance sont utilisés pour échantillonner l'hémisphère $\Omega_x$ lors d'un rebond en $x$. Pour cela on récupère le n\oe ud $n$ le plus proche de $x$ (faisable en temps constant dans notre implantation en utilisant une grille 3D). On construit alors la direction d'importance $\overrightarrow{ximp_n}$ associée à $x$. La distribution utilisée est alors:
 
-\begin{center}
-
 \begin{equation*}
 p_{skel}(\Phi) = \frac{s + 2}{2\pi} cos^s(\vec{ximp_n}, \Phi)
 \end{equation*}
-
-\end{center}
 
 Le paramètre $s$ permet de concentrer les tirs de rayons autour de la direction d'importance $\overrightarrow{ximp_n}$.
 
 \subsection{Résultats et discussion}
 
-Notre méthode conduit à une bonne réduction du bruit, en particulier dans les zones sombre ou l'illumination est exclusivement indirecte.
+Notre méthode conduit à une bonne réduction du bruit, en particulier dans les zones sombres ou l'illumination est exclusivement indirecte.
+\purple{AJOUT D'IMAGES illustrative}
 
+Un artefact apparaît néanmoins: les speckles. Les speckles sont des pixels anormalement illuminés dus à un mauvais échantillonnage. Lorsqu'une direction possédant une forte valeur mais une faible probabilité est choisie, l'estimateur de Monte-Carlo donne une valeur élevée conduisant à l'apparition d'un speckle. Ce type d'artefact s'estompe en augmentant le nombre de rayons par pixels (dû à la convergence de l'estimateur).
 
-Un artefact apparaît néanmoins: les speckles. Les speckles sont des pixels anormalement illuminés dus à un mauvais échantillonnage. Lorsqu'une direction possédant une forte valeur mais une faible probabilité est choisie, l'estimateur de Monte-Carlo donne une valeur anormalement élevée conduisant à l'apparition d'un speckle. Ce type d'artefact s'estompe en augmentant le nombre de rayons par pixels (dû à la convergence de l'estimateur). Une autre solution appelée échantillonnage préférentiel multiple permet d'estomper les speckles. Elle est décrite dans la section suivante.
-
-Plusieurs cas pathologiques peuvent nous conduire à nous rabattre sur un échantillonnage basé sur la BRDF:
-
+D'autre part, plusieurs cas pathologiques, relativement rare, peuvent nous conduire à nous rabattre sur un échantillonnage basé sur la BRDF:
 \begin{itemize}
 \item La direction d'importance peut pointer du coté opposé à la normale en $x$. Cela signifie que le point d'importance est situé de l'autre coté de la surface.
-
 \item Le point d'importance peut ne pas être visible depuis $x$. Dans ce cas il est inutile de tirer aux alentours de sa direction car notre rayon a de forte chances d?être intersecté avant d'atteindre la lumière.
 \end{itemize}
 
-\section{Échantillonnage préférentiel multiple}
+Enfin, en concentrant nos tirs de rayons vers les zones éclairées de la scène, nous pouvons rater des échanges lumineux entre surfaces proches comme le montre la figure~\ref{fig::figure_correction_MIS}.
 
-Comme nous l'avons évoqué dans la section précédente, notre méthode conduit à l'apparition de speckles. Le fait d'ignorer totalement la BRDF au moment d'échantillonner est une des causes de l'apparition de cet artefact. Nous proposons d'utiliser une méthode appelée échantillonnage préférentiel multiple (MIS pour Multiple Importance Sampling) pour prendre en compte à la fois notre stratégie et une stratégie basée sur la BRDF.
+Ces problèmes nous ont naturellement conduit à exploiter une autre solution appelée échantillonnage préférentiel multiple qui répond au problème des speckles et des cas dégénérés.
+
+\section{Échantillonnage préférentiel multiple}
+\begin{figure*}[t!]
+\begin{center}
+\begin{tabular}{ccc}
+	\myincludegraphics{0.30\textwidth}{MIS_extract_lightprob0_clamp1_returnwhenhitlight_1024_4.png} &
+	\myincludegraphics{0.30\textwidth}{MIS_extract_lightprob1_clamp1_returnwhenhitlight_1024_4.png} &
+	\myincludegraphics{0.30\textwidth}{MIS_extract_lightprob0_5_clamp1_returnwhenhitlight_1024_4.png}
+\end{tabular}
+\caption{\label{fig::figure_correction_MIS} \purple{A ECRIRE : c'est plus sombre au milieu}}
+\end{center}
+\end{figure*}
+
+Comme nous l'avons évoqué dans la section précédente, notre méthode conduit à l'apparition de speckles. Le fait d'ignorer totalement la BRDF au moment d'échantillonner est une des causes de l'apparition de cet artefact. D'autre part,  Nous proposons d'utiliser une méthode appelée échantillonnage préférentiel multiple (MIS pour \emph{Multiple Importance Sampling}) pour prendre en compte à la fois notre stratégie d'échantillonnage par squelette curviligne et celle fondée sur la BRDF.
 
 \subsection{Cadre théorique}
 
-Le MIS est une technique utilisée pour échantillonner efficacement en accord avec des produit de fonctions comme c'est le cas pour le lancer de rayons. L'idée est d'utiliser une densité de probabilité construite à partir de la combinaison de plusieurs densité adaptées à chacun des facteurs de la fonction.
+Le MIS est une technique utilisée pour échantillonner efficacement dans le cas de produit de fonctions comme c'est le cas pour le lancer de rayons. L'idée est d'utiliser une densité de probabilité construite à partir de la combinaison de plusieurs densités adaptées à chacun des facteurs de la fonction.
 
 Soit $f(x) = f_1(x)f_2(x)...f_n(x)$ une fonction à intégrer sur un domaine $D$. Soit $p_1, ..., p_n$ les densités de probabilités adaptées à chacune des fonctions $f_i$.
 L'estimateur combiné pour l'intégrale de $f$ est:
@@ -257,7 +263,7 @@ L'estimateur combiné pour l'intégrale de $f$ est:
 \langle F \rangle = \frac{\omega_I(X_I)f(X_I)}{c_Ip_I(X_I)}, I = min\{i~ |~ U < \sum_{j=1}^{i} c_j \}
 \end{equation*}
 
-Les $\omega_i$ sont des fonctions de pondération positives telles que $\sum_i \omega_i = 1$ et les $c_i$ des probabilités associées à chacune des fonctions $f_i$. Le réel $U$ est choisie aléatoirement et uniformément dans l'intervalle $[0,1]$. Cet estimateur est non biaisé et permet de construire une famille de stratégies d'échantillonnage en modifiant les $\omega_i$ et les $c_i$.
+Les $\omega_i$ sont des fonctions de pondération positives telles que $\sum_i \omega_i = 1$ et les $c_i$ des probabilités associées à chacune des fonctions $f_i$. Le nombre réel $U$ est choisi aléatoirement et uniformément dans l'intervalle $[0,1]$. Cet estimateur est non biaisé et permet de construire une famille de stratégies d'échantillonnage en modifiant les $\omega_i$ et les $c_i$.
 
 L'idée derrière cet estimateur est simple: on choisit aléatoirement une stratégie $p_I$ en se basant sur les probabilités $c_i$. Cette stratégie est utilisée pour tirer un échantillon $X_I$. Cet échantillon est alors utilisé pour calculer l'estimation.
 
@@ -267,7 +273,7 @@ Lorsque l'on utilise un seul échantillon, comme c'est le cas en lancer de rayons
 \hat{\omega}_i(x) = \frac{c_ip_i(x)}{\sum_j c_jp_j(x)}
 \end{equation*}
 
-L'utilisation de ces fonctions conduit à l'estimateur suivant appelée "balance heuristic":
+L'utilisation de ces fonctions conduit à l'estimateur suivant appelé "balance heuristic":
 
 \begin{equation*}
 \langle F \rangle = \frac{f(X_I)}{\sum_i c_ip_i(X_I)}, I = min\{i~ |~ U < \sum_{j=1}^{i} c_j \}
