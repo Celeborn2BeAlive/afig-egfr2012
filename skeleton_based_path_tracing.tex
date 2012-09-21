@@ -26,23 +26,26 @@
 \newcommand{\purple}[1]{\textcolor{magenta}{#1}}			% Means COMMENTS
 % ------------------------------------------------------------------------
 
-\title{Échantillonnage préférentiel multiple exploitant un squelette curviligne pour le lancer de rayons}
+\title{Échantillonnage préférentiel multiple avec squelette curviligne pour le lancer de rayons}
 
-\author[L.NO\"{E}L J.CHAUSSARD V.BIRI]%
-	   {Laurent No\"{e}l $^1$,
-	    John Chaussard $^2$, 
-	    Venceslas Biri $^1$
+\author[L.NO\"{E}L J.CHAUSSARD V.BIRI M.COUPRIE]%
+	   {Laurent No\"{e}l $^2$,
+	    John Chaussard $^1$, 
+	    Venceslas Biri $^2$ and
+	    Michel Couprie $^2$ 
 	    \\
-		$^1$ Universit\'{e} Paris Est, LIGM, A3SI-ESIEE \\ 2, boulevard Blaise Pascal, 93162 				Noisy le Grand CEDEX, France \\ laurent.noel@esiee.fr, v.biri@esiee.fr
+		$^1$ Universit\'{e} Paris 13, Sorbonne Paris Cit\'{e}, LAGA, CNRS(UMR 7539), \\ F-93430, 			Villetaneuse, France \\ chaussard@math.univ-paris13.fr
 		\\
-		$^2$ Universit\'{e} Paris 13, Sorbonne Paris Cit\'{e}, LAGA, CNRS(UMR 7539), \\ F-93430, 			Villetaneuse, France \\ chaussard@math.univ-paris13.fr}
+		$^2$ Universit\'{e} Paris Est, LIGM, A3SI-ESIEE \\ 2, boulevard Blaise Pascal, 93162 				Noisy le Grand CEDEX, France \\ laurent.noel@esiee.fr, v.biri@esiee.fr, 							michel.couprie@esiee.fr}
 
 \begin{document}
 
 \maketitle
 
 \begin{abstract}
-   Ceci est un résumé. Un résumé en anglais et en français est demandé.
+We present an importance sampling strategy for Monte-Carlo path tracing based on a curvilinear skeleton of the void of the scene. This skeleton allows us to build a probability density function that is able to sample directions according to the distribution of light in the scene. We discuss our results and expose some drawbacks of our method. Then we introduce a new strategy based on multiple importance sampling that permits us to correct the artifacts and give better results.
+
+Nous présentons une méthode d'échantillonnage préférentiel pour l'algorithme du lancer de rayons. Nous nous basons sur un squelette curviligne du vide de la scène nous permettant de construire une densité de probabilité adaptée à la distribution de lumière. Nous présentons nos résultats et expliquons les artefacts générés par la méthode. Nous introduisons alors une nouvelle stratégie basée sur l'échantillonnage préférentiel multiple qui corrige ces artefacts et améliore la qualité des images.
 
 \end{abstract}
 \keywords{Synthèse d'Images, Illumination Globale, Lancer de Rayons, Squelettisation}
@@ -53,21 +56,21 @@
 	\myincludegraphics{0.60\textwidth}{dgci_ray_corridor.png} &
 	\myincludegraphics{0.40\textwidth}{dgci_compare_door.png}
 \end{tabular}
-\caption{\label{fig::intro_image} Regardez comment les rayons s'orientent vers les parties éclairées de la scène gr\^ace à notre skelette curviligne( image $b$), comparé à l'algorithme classique du lancer de rayon (image $a$). Les images $c$ et $d$ montrent la réduction du bruit obtenu par le \emph{path tracing} classique ($c$) et notre méthode ($d$).}
+\caption{\label{fig::intro_image} Les rayons s'orientent vers les parties éclairées de la scène gr\^ace à notre squelette curviligne (image $b$), comparé à l'algorithme classique du lancer de rayon (image $a$). Les images $c$ et $d$ montrent le bruit généré par le \emph{path tracing} classique ($c$) et notre méthode ($d$).}
 \end{center}
 \end{figure*}
 
 \section{Introduction}
 
-Le lancer de rayons ou \emph{path tracing} est un algorithme de rendu utilisé en illumination globale. Il a été introduit par Kajiya en 1986~\cite{Kaj86} et  vise à générer des images photo-réalistes en mimant le comportement et les trajets de la lumière, au prix d'un temps de calcul relativement long, notamment dans le cas où la lumière est fortement indirecte. Si de nombreuses variantes ont été développées parmi lesquelles le \emph{bidirectional path tracing}~\cite{LW93}, le \emph{photon mapping}~\cite{Jen96}, le Metropolis Light Transport~\cite{VG97} ou encore l'emploi des Virtual Point Light~\cite{Ke97}, le \emph{path tracing} reste toujours la méthode de référence comme le prouve l'emploi d'Arnold chez Dreamworks ou les ouvrages comme~\cite{PBRT10}.
+% PARAGRAPHE 3 EUROGRAPHICS
 
-Cet algorithme se fonde sur la résolution d'une équation intégrale appelée équation du rendu. Le calcul de luminosité se fait le long de directions échantillonnées à l'aide d'une densité de probabilité et l'intégrale est estimée grâce à la méthode de Monte-Carlo. Le choix de ces directions est crucial pour l'amélioration de la qualité du résultat et la réduction du bruit généré dans l'image finale. L'échantillonnage préférentiel (\emph{importance sampling}) est alors utilisé~\cite{Blasi94} afin de choisir des directions pertinentes pour accélérer la convergence de l'algorithme. Cette méthode exploite les informations disponibles sur la fonction à intégrer pour choisir préférentiellement des directions pour lesquelles la fonction est forte. Ces informations sont la plupart du temps dérivées du modèle de réflexion utilisé et des matériaux composant les surfaces. Or la distribution de lumière dans la scène n'est que très peu utilisée pour l'échantillonnage préférentiel car beaucoup plus difficile à exploiter. Ainsi, les figure~\ref{fig::intro_image}.a et b illustrent que dans le cas de zones éloignées de la lumière, il devient nécessaire d'exploiter cette distribution de lumière.
+Le lancer de rayons ou \emph{path tracing} est un algorithme de rendu utilisé en illumination globale. Il a été introduit par Kajiya en 1986~\cite{Kaj86} et  vise à générer des images photo-réalistes en mimant le comportement et les trajets de la lumière, au prix d'un temps de calcul relativement long. L'algorithme se base sur la résolution d'une équation intégrale appelée équation du rendu. Le calcul de luminosité se fait le long de directions échantillonnées à l'aide d'une densité de probabilité et l'intégrale est estimée grâce à la méthode de Monte-Carlo. 
 
-\purple{REINTRODUIRE OU TRADUIRE LE TROISIEME PARAGRAPHE DU PAPIER EG12}
-Des travaux~\cite{Jensen95,HP02} en ce sens exploitent une carte de photon afin de construire une estimation de l'irradiance affectant un point d'intersection lors du lancer de rayon. Cette estimation est utilisée afin d'échantillonner efficacement l'hémisphère autour du point en accord avec la distribution de lumière dans la scène. Cette méthode est efficace mais peut \^etre coûteuse en espace (stockage de la carte de photons) et de plus, ne peut \^etre exploitée que si le nombre de photons est suffisant ce qui n'est pas le cas dans des zones très occultées.
+Le choix de ces directions est crucial pour l'amélioration de la qualité du résultat et la réduction du bruit généré dans l'image finale. L'échantillonnage préférentiel (\emph{importance sampling}) est souvent utilisé~\cite{Blasi94} afin de choisir des directions pertinentes pour accélérer la convergence de l'algorithme. Cette méthode exploite les informations disponibles sur la fonction à intégrer pour choisir préférentiellement des directions pour lesquelles la fonction est forte. Ces informations sont la plupart du temps dérivées du modèle de réflexion utilisé et des matériaux composant les surfaces. La distribution de lumière dans la scène n'est que très peu utilisé pour l'échantillonnage préférentiel car beaucoup plus difficile à exploiter. 
 
-\purple{S'inspirer du 4ème § du papier EG12 PUIS INSISTER SUR LE MIS (puisque c'est la chose nouvelle)}
-Nous présentons une nouvelle méthode d'échantillonnage pour l'algorithme du lancer de rayons. Cette méthode est basé sur l'utilisation d'un squelette topologique curviligne du vide de la scène. Il nous permet de choisir des directions porteuses d'énergie lors d'un rebond et ainsi améliorer la vitesse de convergence de l'algorithme.
+Jensen~\cite{Jensen95} exploite une carte de photon afin de construire une estimation de l'irradiance affectant un point d'intersection lors du lancer de rayon. Cette estimation est utilisée afin d'échantillonner efficacement l'hémisphère autour du point en accord avec la distribution de lumière dans la scène. Cette méthode est efficace mais coûteuse en espace (stockage de la carte de photons) et en temps (construction de la carte).
+
+Nous présentons une nouvelle méthode d'échantillonnage pour l'algorithme du lancer de rayons. Cette méthode est basé sur l'utilisation d'un squelette topologique curviligne du vide de la scène. Il nous permet de choisir des directions porteuses d'énergie lors d'un rebond et ainsi améliorer la vitesse de convergence de l'algorithme. La figure \ref{fig::intro_image} illustre la distribution des rayons dans la scène et la réduction du bruit obtenue avec notre algorithme.
 
 \section{Lancer de rayons}
 
@@ -78,9 +81,11 @@ Partant d'une caméra placé dans une scène virtuelle, on lance des rayons à trave
 \subsection{Équation du rendu}
 
 L'algorithme du lancer de rayon résout à chaque point d'impact entre un rayon et une surface, l'équation du rendu~\cite{Kaj86} (figure~\ref{fig::rendering_equation}). Elle décrit la manière dont la lumière est réfléchie à chaque rebond.
+
 \begin{equation*}
 L(x \rightarrow \Theta) = L_e(x \rightarrow \Theta) + L_r(x \rightarrow \Theta)
 \end{equation*}
+
 \begin{equation*}
 L_r(x \rightarrow \Theta) = \int_{\Phi \in \Omega_x} f_r(x, \Theta \leftrightarrow \Phi) L(x \leftarrow \Phi) cos(N_x, \Phi) d\omega_{\Phi}
 \end{equation*}
@@ -216,20 +221,31 @@ Le squelette est filtré en utilisant notre méthode présenté dans \cite{Chaussard
 %
 %The skeleton is filtered using our technique explained in \cite{Chaussard_phd}, which requires no user input: during the skeletonization, we calculate the lifespan of each point of the object (the number of iterations necessary to remove a point from the skeleton). We also compute for each point $p$ of the object, the size of the biggest ball included in the object and containing $p$ (called opening value of $p$). The filtering consists in keeping, during skeletonization, all points whose lifespan is superior to their opening value. This provides a noise robust skeleton relevant of the object visual aspect.
 
-La dernière étape consiste à convertir le squelette obtenu (représenté par un cubique complexe) en un graphe dont les n\oe uds sont des points de $\mathbb{R}^3$ et dont les arr\^etes encodent la topologie de la scène. 
+La dernière étape consiste à convertir le squelette obtenu (représenté par un cubique complexe) en un graphe dont les n\oe uds sont des points de $\mathbb{R}^3$ et dont les arrêtes encodent la topologie de la scène. La figure \ref{fig::skeleton} illustre le squelette curviligne du vide de Sponza. On observe que la topologie est bien conservée (le squelette passe entre chacun des piliers) et qu'il est bien centré dans la scène, conservant ainsi une apparence visuelle proche de la scène.
 
-En plus du squelette nous conservons une grille 3D couvrant la scène. On stocke dans chaque case de cette grille l'indice du n\oe d du squelette le plus proche. Ainsi nous pouvons récupérer en temps constant le n\oeu d le plus proche de chaque point 3D de la scène.
+\begin{figure*}[t!]
+\begin{center}
+\myincludegraphics{0.6\textwidth}{skel.png}
+\caption{\label{fig::skeleton} Squelette du vide de Sponza (en rouge)}
+\end{center}
+\end{figure*}
 
-\purple{DETAILLE MIEUX, RAJOUTE L'HISTOIRE DE LA GRILLE 3D QUI NOUS PERMET D'AVOIR EN TEMPS CONSTANT ACCES pour tout point de la scène au plus proche point du squelette}
+En plus du squelette nous conservons une grille 3D couvrant la scène. Nous stockons dans chaque case de cette grille l'indice du n\oe d du squelette le plus proche. Ainsi nous pouvons récupérer en temps constant le n\oe ud le plus proche de chaque point 3D de la scène.
 
 \subsection{Calcul des points d'importance}
 
-\purple{INSERE UN SCHEMA}
 Soit $G = (V, E)$ le graphe représentant le squelette. Pour chaque n\oe ud $n \in V$ un point d'importance $imp_n$ est construit en direction de la lumière $L$. 
 
 Soit $n_L$ le n\oe ud le plus proche de la lumière. On commence par calculer un arbre des plus cours chemins de racine $n_L$. Pour cela on utilise l'algorithme de Dijkstra et une distance $d$ basée sur l'illumination. Soit $u = (u_1, u_2) \in E$ une arrête du graphe. Si le n\oe ud $u_2$ est visible depuis $n_L$ on fixe $d(u) = 1$, sinon $d(u) = 10$. Ainsi les chemins illuminés ont une distance associée plus courte et nous conduisent plus rapidement à la lumière. A l'issue de cette étape on possède pour chaque n\oe ud le plus court chemin vers le n\oe ud $n_L$.
 
-Soit $n$ un n\oe ud du graphe. On note $V(n)$ l'ensemble des n\oe uds visibles depuis $n$ le long du plus court chemin vers $n_L$. Le point d'importance $imp_n$ associé à $n$ est le barycentre de $V(n)$.
+Soit $n$ un n\oe ud du graphe. On note $V(n)$ l'ensemble des n\oe uds visibles depuis $n$ le long du plus court chemin vers $n_L$. Le point d'importance $imp_n$ associé à $n$ est le barycentre de $V(n)$ (voir figure \ref{fig::importance_points}).
+
+\begin{figure*}[t!]
+\begin{center}
+\myincludegraphics{0.2\textwidth}{importance_points.pdf}
+\caption{\label{fig::importance_points} Construction des points d'importances}
+\end{center}
+\end{figure*}
 
 \subsection{Utilisation des points d'importance}
 
@@ -243,15 +259,21 @@ Le paramètre $s$ permet de concentrer les tirs de rayons autour de la direction 
 
 \subsection{Résultats et discussion}
 
-Notre méthode conduit à une bonne réduction du bruit, en particulier dans les zones sombres ou l'illumination est exclusivement indirecte.
-\purple{AJOUT D'IMAGES illustrative}
+Notre méthode conduit à une bonne réduction du bruit, en particulier dans les zones sombres ou l'illumination est exclusivement indirecte (voir figure \ref{fig::four_scenes}).
 
-Un artefact apparaît néanmoins: les speckles. Les speckles sont des pixels anormalement illuminés dus à un mauvais échantillonnage. Lorsqu'une direction possédant une forte valeur mais une faible probabilité est choisie, l'estimateur de Monte-Carlo donne une valeur élevée conduisant à l'apparition d'un speckle. Ce type d'artefact s'estompe en augmentant le nombre de rayons par pixels (dû à la convergence de l'estimateur).
+\begin{figure*}[t!]
+\begin{center}
+\myincludegraphics{1\textwidth}{four_scenes.png}
+\caption{\label{fig::four_scenes} Comparaison du résultat de notre algorithme (images du haut) avec un lancer de rayons standard (images du bas). Sur chaque image l'erreur quadratique moyenne (MSE) avec une image de référence est affichée. Notre algorithme obtient de meilleurs résultats sur les quatre scènes.}
+\end{center}
+\end{figure*}
 
-D'autre part, plusieurs cas pathologiques, relativement rare, peuvent nous conduire à nous rabattre sur un échantillonnage basé sur la BRDF:
+Un artefact apparaît néanmoins: les speckles. Les speckles sont des pixels anormalement illuminés dus à un mauvais échantillonnage. Lorsqu'une direction possédant une forte valeur mais une faible probabilité est choisie, l'estimateur de Monte-Carlo donne une valeur élevée conduisant à l'apparition d'un speckle. Ce type d'artefact s'estompe en augmentant le nombre de rayons par pixels (dû à la convergence de l'estimateur). Une solution simple pour supprimer ces artefacts est de borner l'illumination à une valeur fixée. On introduit alors un biais dans la méthode puisque une partie de l'énergie lumineuse ne sera jamais distribué. Une meilleure solution est présenté dans la section \ref{sec::MIS}.
+
+D'autre part, plusieurs cas pathologiques, relativement rares, peuvent nous conduire à nous rabattre sur un échantillonnage basé sur la BRDF:
 \begin{itemize}
 \item La direction d'importance peut pointer du coté opposé à la normale en $x$. Cela signifie que le point d'importance est situé de l'autre coté de la surface.
-\item Le point d'importance peut ne pas être visible depuis $x$. Dans ce cas il est inutile de tirer aux alentours de sa direction car notre rayon a de forte chances d?être intersecté avant d'atteindre la lumière.
+\item Le point d'importance peut ne pas être visible depuis $x$. Dans ce cas il est inutile de tirer aux alentours de sa direction car notre rayon a de forte chances d'être intersecté avant d'atteindre la lumière.
 \end{itemize}
 
 Enfin, en concentrant nos tirs de rayons vers les zones éclairées de la scène, nous pouvons rater des échanges lumineux entre surfaces proches comme le montre la figure~\ref{fig::figure_correction_MIS}.
@@ -259,14 +281,15 @@ Enfin, en concentrant nos tirs de rayons vers les zones éclairées de la scène, n
 Ces problèmes nous ont naturellement conduit à exploiter une autre solution appelée échantillonnage préférentiel multiple qui répond au problème des speckles et des cas dégénérés.
 
 \section{Échantillonnage préférentiel multiple}
+\label{sec::MIS}
+
 \begin{figure*}[t!]
 \begin{center}
-\begin{tabular}{ccc}
+\begin{tabular}{cc}
 	\myincludegraphics{0.30\textwidth}{MIS_extract_lightprob0_clamp1_returnwhenhitlight_1024_4.png} &
-	\myincludegraphics{0.30\textwidth}{MIS_extract_lightprob1_clamp1_returnwhenhitlight_1024_4.png} &
-	\myincludegraphics{0.30\textwidth}{MIS_extract_lightprob0_5_clamp1_returnwhenhitlight_1024_4.png}
+	\myincludegraphics{0.30\textwidth}{MIS_extract_lightprob1_clamp1_returnwhenhitlight_1024_4.png}
 \end{tabular}
-\caption{\label{fig::figure_correction_MIS} \purple{A ECRIRE : c'est plus sombre au milieu}}
+\caption{\label{fig::figure_correction_MIS} Notre méthode (image de gauche) sans MIS conduit à rater des échanges lumineux entre surfaces proche. Le path tracing standard (image de droite) génère un résultat plus sombre du à l'occlusion ambiante dans le coin.}
 \end{center}
 \end{figure*}
 
