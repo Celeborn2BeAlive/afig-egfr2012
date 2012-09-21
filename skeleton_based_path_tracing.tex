@@ -216,6 +216,9 @@ Le squelette est filtré en utilisant notre méthode présenté dans \cite{Chaussard
 %The skeleton is filtered using our technique explained in \cite{Chaussard_phd}, which requires no user input: during the skeletonization, we calculate the lifespan of each point of the object (the number of iterations necessary to remove a point from the skeleton). We also compute for each point $p$ of the object, the size of the biggest ball included in the object and containing $p$ (called opening value of $p$). The filtering consists in keeping, during skeletonization, all points whose lifespan is superior to their opening value. This provides a noise robust skeleton relevant of the object visual aspect.
 
 La dernière étape consiste à convertir le squelette obtenu (représenté par un cubique complexe) en un graphe dont les n\oe uds sont des points de $\mathbb{R}^3$ et dont les arr\^etes encodent la topologie de la scène. 
+
+En plus du squelette nous conservons une grille 3D couvrant la scène. On stocke dans chaque case de cette grille l'indice du n\oe d du squelette le plus proche. Ainsi nous pouvons récupérer en temps constant le n\oeu d le plus proche de chaque point 3D de la scène.
+
 \purple{DETAILLE MIEUX, RAJOUTE L'HISTOIRE DE LA GRILLE 3D QUI NOUS PERMET D'AVOIR EN TEMPS CONSTANT ACCES pour tout point de la scène au plus proche point du squelette}
 
 \subsection{Calcul des points d'importance}
