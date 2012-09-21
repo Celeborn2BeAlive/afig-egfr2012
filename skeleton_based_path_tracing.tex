@@ -60,11 +60,15 @@
 
 \section{Introduction}
 
-Nous présentons une nouvelle méthode d'échantillonage pour l'algorithme du lancer de rayons. Cette méthode est basé sur l'utilisation d'un squelette topologique curviligne du vide de la scène. Il nous permet de choisir des directions porteuses d'énergie lors d'un rebond.
+Le lancer de rayons ou \emph{path tracing} est un algorithme de rendu utilisé en illumination globale. Il a été introduit par Kajiya en 1986~\cite{Kaj86} et  vise à générer des images photo-réalistes en mimant le comportement et les trajets de la lumière, au prix d'un temps de calcul relativement long. L'algorithme se base sur la résolution d'une équation intégrale appelée équation du rendu. Le calcul de luminosité se fait le long de directions échantillonnées à l'aide d'une densité de probabilité et l'intégrale est estimée grâce à la méthode de Monte-Carlo. 
+
+Le choix de ces directions est crucial pour l'amélioration de la qualité du résultat et la réduction du bruit généré dans l'image finale. L'échantillonnage préférentiel (\emph{importance sampling}) est souvent utilisé~\cite{Blasi94} afin de choisir des directions pertinentes pour accélérer la convergence de l'algorithme. Cette méthode exploite les informations disponibles sur la fonction à intégrer pour choisir préférentiellement des directions pour lesquelles la fonction est forte. Ces informations sont la plupart du temps dérivées du modèle de réflexion utilisé et des matériaux composant les surfaces. La distribution de lumière dans la scène n'est que très peu utilisé pour l'échantillonnage préférentiel car beaucoup plus difficile à exploiter. 
+
+Jensen~\cite{Jensen95} exploite une carte de photon afin de construire une estimation de l'irradiance affectant un point d'intersection lors du lancer de rayon. Cette estimation est utilisée afin d'échantillonner efficacement l'hémisphère autour du point en accord avec la distribution de lumière dans la scène. Cette méthode est efficace mais coûteuse en espace (stockage de la carte de photons) et en temps (construction de la carte).
+
+Nous présentons une nouvelle méthode d'échantillonnage pour l'algorithme du lancer de rayons. Cette méthode est basé sur l'utilisation d'un squelette topologique curviligne du vide de la scène. Il nous permet de choisir des directions porteuses d'énergie lors d'un rebond et ainsi améliorer la vitesse de convergence de l'algorithme.
 
 \section{Lancer de rayons}
-
-Le lancer de rayons ou \emph{path tracing} est un algorithme de rendu utilisé en illumination globale. Il vise à générer des images photo-réalistes en mimant le comportement et les trajets de la lumière, au prix d'un temps de calcul relativement long. 
 
 \subsection{Principe général}
 \purple{A RESUME}.
