@@ -949,7 +949,7 @@ submitted to \textit{#1}%
 \copyrightTextRunPag{\p@copyrightTextShort{\number\year}}
 %% \pagerange{\mbox{}}%
 \def\ps@titlepage{\let\@mkboth\@gobbletwo
- \def\@oddhead{\raisebox{\z@}[8pt][1pt]{\parbox{0.3\textwidth}{\includegraphics{REFIG_logo_final_sans_titre_petit_format.eps}}\parbox{0.7\textwidth}{\small
+ \def\@oddhead{\raisebox{\z@}[8pt][1pt]{\parbox{0.3\textwidth}{\includegraphics{images/REFIG_logo_final_sans_titre_petit_format.pdf}}\parbox{0.7\textwidth}{\small
 %   \textit{Volume \j@volume} (\textit{\number\year}\/),
        \textit{Revue Électronique Francophone d'Informatique
          Graphique,}
