@@ -26,7 +26,7 @@
 \newcommand{\purple}[1]{\textcolor{magenta}{#1}}			% Means COMMENTS
 % ------------------------------------------------------------------------
 
-\title{Lancer de rayons guidé par le squelette}
+\title{Échantillonnage préférentiel multiple avec squelette curviligne pour le lancer de rayons}
 
 \author[L.NO\"{E}L J.CHAUSSARD V.BIRI M.COUPRIE]%
 	   {Laurent No\"{e}l $^2$,
@@ -71,12 +71,12 @@ Nous présentons une nouvelle méthode d'échantillonnage pour l'algorithme du lanc
 \section{Lancer de rayons}
 
 \subsection{Principe général}
-\purple{A RESUME}.
-Le lancer de rayons fonctionne de la manière suivante: partant d'une caméra placé dans une scène virtuelle composée de surfaces et de lumière, on lance des rayons à travers l'image virtuelle vue par la caméra. Ces rayons rebondissent dans la scène jusqu'à atteindre les lumières ou un maximum de rebonds fixé. Des chemins entre la caméra et les lumières sont ainsi crées et on calcule la quantité de lumière traversant chacun des chemins en se basant sur les propriétés des matériaux à chaque point d'impact. On obtient ainsi une couleur pour chaque rayon lancé. Les couleurs calculées sont utilisées pour reconstruire l'image finale.
+
+Partant d'une caméra placé dans une scène virtuelle, on lance des rayons à travers l'image vue par la caméra. Ces rayons rebondissent dans la scène jusqu'à atteindre un maximum de rebonds fixé. On calcule la quantité de lumière traversant chacun des rayons en se basant sur un modèle de réflexion et sur les matériaux composant la scène. On obtient ainsi une couleur pour chaque rayon lancé nous permettant ainsi de construire une approximation de l'image. La qualité du résultat dépend du nombre de rayons lancés et des chemins traversés dans la scène.
 
 \subsection{Équation du rendu}
 
-L'algorithme du lancer de rayon résout à chaque point d'impact entre un rayon et une surface, l'équation du rendu~\cite{Kaj86}. Elle décrit la manière dont la lumière est réfléchie à chaque rebond.
+L'algorithme du lancer de rayon résout à chaque point d'impact entre un rayon et une surface, l'équation du rendu~\cite{Kaj86} (figure~\ref{fig::rendering_equation}). Elle décrit la manière dont la lumière est réfléchie à chaque rebond.
 \begin{equation*}
 L(x \rightarrow \Theta) = L_e(x \rightarrow \Theta) + L_r(x \rightarrow \Theta)
 \end{equation*}
@@ -86,10 +86,17 @@ L_r(x \rightarrow \Theta) = \int_{\Phi \in \Omega_x} f_r(x, \Theta \leftrightarr
 
 Le terme $L(x \rightarrow \Theta)$ représente la radiance en $x$ envoyée dans la direction $\Theta$, quantité devant être calculée pour chaque point de l'image vue par la caméra. En fait, l'équation du rendu exprime une idée simple et intuitive~: la radiance du point $x$ dans la direction $\Theta$ est la somme de la radiance émise directement par $x$ ($L_e(x \rightarrow \Theta)$) et de la radiance réfléchie par $x$ ($L_r(x \rightarrow \Theta)$). La quantité $L_e(x \rightarrow \Theta)$ est la radiance émise. Elle est non nulle uniquement sur les sources de lumière et est fournie en entrée de l'algorithme pour chaque lumière.
 
-\purple{INSERER UN SCHEMA}
-La radiance réfléchie $L_r(x \rightarrow \Theta)$ doit être calculée. Pour cela on intègre la radiance incidente $L(x \leftarrow \Phi)$ sur l'hémisphère $\Omega_x$ centré sur la normale $N_x$ en $x$. Avant d'être intégrée la radiance incidente est multipliée par le facteur $f_s(x, \Theta \leftrightarrow \Phi) = f_r(x, \Theta \leftrightarrow \Phi) cos(N_x, \Phi)$. La fonction $f_r$ est appelée fonction de réflectance bi-directionnelle (ou plus couramment BRDF pour "Bidirectional Reflectance Distribution Function"). Le terme $f_r(x, \Theta \leftrightarrow \Phi)$ exprime la proportion de réflechie dans la direction $\Theta$ lorsque elle atteint $x$ selon la direction $\Phi$. C'est une quantité qui dépend du matériau en $x$. En pratique on la calcule à partir d'un modèle de réflexion et éventuellement de textures. % Tu peux aussi décrire le cosinus.
+\begin{figure*}[t!]
+\begin{center}
+\myincludegraphics{0.4\textwidth}{rendering_equation.png}
+\caption{\label{fig::rendering_equation} L'équation du rendu modélise la réflexion de lumière en un point de surface}
+\end{center}
+\end{figure*}
+
+La radiance réfléchie $L_r(x \rightarrow \Theta)$ doit être calculée. Pour cela on intègre la radiance incidente $L(x \leftarrow \Phi)$ sur l'hémisphère $\Omega_x$ centré sur la normale $N_x$ en $x$. Avant d'être intégrée la radiance incidente est multipliée par le facteur $f_s(x, \Theta \leftrightarrow \Phi) = f_r(x, \Theta \leftrightarrow \Phi) cos(N_x, \Phi)$. La fonction $f_r$ est appelée fonction de réflectance bi-directionnelle (ou plus couramment BRDF pour "Bidirectional Reflectance Distribution Function"). Le terme $f_r(x, \Theta \leftrightarrow \Phi)$ exprime la proportion de lumière réflechie dans la direction $\Theta$ lorsque elle atteint $x$ selon la direction $\Phi$. C'est une quantité qui dépend du matériau en $x$. En pratique on la calcule à partir d'un modèle de réflexion et éventuellement de textures. Le cosinus atténue la lumière provenant des directions rasantes (il est maximal lorsque la direction d'incidence est la normale au point $x$).
 
 Dans le vide la radiance reste constante le long des lignes droites ce qui nous permet d'exprimer la radiance incidente $L(x \leftarrow \Phi)$ en fonction de la radiance:
+
 \begin{equation*}
 L(x \leftarrow \Phi) = L(r(x, \Phi) \rightarrow -\Phi)
 \end{equation*}
@@ -130,12 +137,11 @@ L'algorithme du lancer de rayon stochastique utilise cette méthode pour estimer 
 \subsection{Échantillonnage préférentiel}
 \label{sec::importance_sampling}
 
-Une stratégie couramment utilisée pour réduire la variance de l'estimateur est d'utiliser une distribution $p$ adaptée à la fonction à intégrer. Cette méthode est appelée échantillonage préférentiel ou \emph{importance sampling}.\purple{t'es s\^ur de la traduction ?}
+Une stratégie couramment utilisée pour réduire la variance de l'estimateur est d'utiliser une distribution $p$ adaptée à la fonction à intégrer. Cette méthode est appelée échantillonage préférentiel ou \emph{importance sampling}.
 
 Une distribution uniforme sur l'hémisphère ($p(\Phi) = \frac{1}{2\pi}$) conduit généralement à de mauvais résultats: lorsque peu de rayons sont lancés l'image de sortie est très bruitée. Cela est d\^u au fait que toutes les directions sont traitées de la m\^eme manière. Or l'intégrande est très faible pour certaines directions (par exemple les directions rasantes, le cosinus avec la normale étant nul; ou les directions n'apportant que peu d'énergie). Une bonne distribution doit donner aux directions, pour lesquelles l'intégrande est forte, plus de chances d'être choisies. Cela conduit à une réduction du bruit et une convergence plus rapide vers la véritable image.
 
 Dans l'algorithme du lancer de rayon, la fonction a intégrer est un produit de deux fonctions:
-\purple{Rajoute le cosinus !!}
 \begin{equation*}
 f(\Phi) = f_s(x, \Theta \leftrightarrow \Phi) L(r(x, \Phi) \rightarrow -\Phi)
 \end{equation*}
@@ -194,14 +200,20 @@ Comme nous l'avons évoqué dans la section \ref{sec::importance_sampling}, notre 
 \item Un squelette curviligne est un objet à une dimension. Cela nous permet de le représenter à l'aide d'un graphe composé d'un nombre de n{\oe}uds réduit. Nous avons ainsi une représentation légère en mémoire et les pré-calculs sont rapides.
 \end{itemize}
 
-\subsection{Voxelisation et squelettisation \purple{SECTION A TRADUIRE}}
+\subsection{Voxelisation et squelettisation}
 La première étape consiste à voxeliser la scène puis à inverser le résultat (les voxels pleins deviennent vides et inversement). L'inversion est nécessaire afin d'avoir une voxelisation du vide. Une telle voxelisation binaire peut se faire très rapidement~\cite{FBP09}.
 
-A skeleton of an object $X$ is a subset of points of $X$ that possesses the same \textit{topology} of $X$, that is, in 3d, the same number of connected components, holes and cavities. Moreover, a skeleton of $X$ should be centered in $X$ and at most two-dimensional. Some works on skeletonization focus on obtaining a skeleton which \textit{looks like} the object : in this case, the difficulty lies in obtaining a skeleton devoided of spurious elements, which can be seen as noise.
+Un squelette d'un objet $X$ est un sous ensemble de points de $X$ possédant la même \emph{topologie} que $X$, c'est à dire en 3 dimensions le même nombre de composantes connexes, trous et cavités. De plus un squelette de $X$ doit être centré au sein de $X$ et au plus de dimension 2. Les travaux en squelettisation se concentrent sur l'obtention d'un squelette ressemblant géométriquement à l'objet initial: dans ce cas la difficulté est d'obtenir un squelette ne comportant pas d'artefacts pouvant être vu comme du bruit.
 
-Recent works on skeletonization use the cubical complex framework in order to obtain robust skeletons \cite{BC06a}. We use the skeletonization method presented in \cite{CC09}, which takes as input a voxel object and produces a thin and centered cubical complex skeleton. We modified the algorithm in order to only keep 1d elements in the output, thus producing a curvilinear skeleton.
+Les travaux récent en squelettisation se placent dans le cadre des cubiques complexes afin d'obtenir un squelette robuste~\cite{BC06a}. Nous utilisons l'algorithme de squelettisation présenté dans~\cite{CC09} prenant en entrée un objet voxélisé et produisant un squelette de dimension inférieure centré dans l'objet et représenté par un cubique complexe. Nous avons modifié l'algorithme dans le but de ne conserver que les éléments de dimension 1 conduisant ainsi à l'obtention d'un squelette curviligne.
 
-The skeleton is filtered using our technique explained in \cite{Chaussard_phd}, which requires no user input: during the skeletonization, we calculate the lifespan of each point of the object (the number of iterations necessary to remove a point from the skeleton). We also compute for each point $p$ of the object, the size of the biggest ball included in the object and containing $p$ (called opening value of $p$). The filtering consists in keeping, during skeletonization, all points whose lifespan is superior to their opening value. This provides a noise robust skeleton relevant of the object visual aspect.
+Le squelette est filtré en utilisant notre méthode présenté dans \cite{Chaussard_phd}. Cette méthode ne requiert aucun paramètre d'entrée: durant la squelettisation nous calculons l?espérance de vie de chaque point de l'objet (le nombre d'itérations nécessaires pour supprimer le point du squelette). Nous calculons également pour chaque point $p$ de l'objet la taille de la boule maximale contenant dans l'objet et contenant $p$ (appelée la valeur d'ouverture de $p$). Le filtrage consiste à garder durant la squelettisation tous les points ayant une espérance de vie supérieure à leur valeur d'ouverture. Cela nous permet d'obtenir un squelette robuste au bruit et conservant l'aspect visuel de l'objet original.
+
+%A skeleton of an object $X$ is a subset of points of $X$ that possesses the same \textit{topology} of $X$, that is, in 3d, the same number of connected components, holes and cavities. Moreover, a skeleton of $X$ should be centered in $X$ and at most two-dimensional. Some works on skeletonization focus on obtaining a skeleton which \textit{looks like} the object : in this case, the difficulty lies in obtaining a skeleton devoided of spurious elements, which can be seen as noise.
+%
+%Recent works on skeletonization use the cubical complex framework in order to obtain robust skeletons \cite{BC06a}. We use the skeletonization method presented in \cite{CC09}, which takes as input a voxel object and produces a thin and centered cubical complex skeleton. We modified the algorithm in order to only keep 1d elements in the output, thus producing a curvilinear skeleton.
+%
+%The skeleton is filtered using our technique explained in \cite{Chaussard_phd}, which requires no user input: during the skeletonization, we calculate the lifespan of each point of the object (the number of iterations necessary to remove a point from the skeleton). We also compute for each point $p$ of the object, the size of the biggest ball included in the object and containing $p$ (called opening value of $p$). The filtering consists in keeping, during skeletonization, all points whose lifespan is superior to their opening value. This provides a noise robust skeleton relevant of the object visual aspect.
 
 La dernière étape consiste à convertir le squelette obtenu (représenté par un cubique complexe) en un graphe dont les n\oe uds sont des points de $\mathbb{R}^3$ et dont les arr\^etes encodent la topologie de la scène. 
 \purple{DETAILLE MIEUX, RAJOUTE L'HISTOIRE DE LA GRILLE 3D QUI NOUS PERMET D'AVOIR EN TEMPS CONSTANT ACCES pour tout point de la scène au plus proche point du squelette}
