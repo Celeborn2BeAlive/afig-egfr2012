@@ -44,36 +44,39 @@
 \begin{abstract}
 We present an importance sampling strategy for Monte-Carlo path tracing based on a curvilinear skeleton of the void of the scene. This skeleton allows us to build a probability density function that is able to sample directions according to the distribution of light in the scene. We discuss our results and expose some drawbacks of our method. Then we introduce a new strategy based on multiple importance sampling that permits us to correct the artifacts and gives better results. \\
 
-Nous présentons une méthode d'échantillonnage préférentiel pour l'algorithme du lancer de rayons. Nous nous basons sur un squelette curviligne du vide de la scène nous permettant de construire une densité de probabilité adaptée à la distribution de lumière. Nous présentons nos résultats et expliquons les artefacts générés par la méthode. Nous introduisons alors une nouvelle stratégie basée sur l'échantillonnage préférentiel multiple qui corrige ces artefacts et améliore la qualité des images.
+Nous présentons une méthode d'échantillonnage préférentiel pour l'algorithme du lancer de rayons. Nous nous basons sur un squelette curviligne du vide de la scène nous permettant de construire une densité de probabilité adaptée à la distribution de lumière. Nous présentons nos résultats et discutons les artefacts générés par la méthode. Nous introduisons alors une nouvelle stratégie basée sur l'échantillonnage préférentiel multiple qui corrige ces artefacts et améliore la qualité des images.
 
 \end{abstract}
-\keywords{Synthèse d'Images, Illumination Globale, Lancer de Rayons, Squelettisation, Échantillonnage Préférentiel Multiple}
+
+\keywords{Synthèse d'images, Illumination globale, Lancer de rayons, Squelettisation, Échantillonnage préférentiel multiple}
+
 %-------------------------------------------------------------------------
+
+\section{Introduction}
+
 \begin{figure*}[t!]
 \begin{center}
 \begin{tabular}{cc}
 	\myincludegraphics{0.60\textwidth}{dgci_ray_corridor.png} &
 	\myincludegraphics{0.40\textwidth}{dgci_compare_door.png}
 \end{tabular}
-\caption{\label{fig::intro_image} Les rayons s'orientent vers les parties éclairées de la scène gr\^ace à notre squelette curviligne (image $b$), comparé à l'algorithme classique du lancer de rayon (image $a$). Les images $c$ et $d$ montrent le bruit généré par le \emph{path tracing} classique ($c$) et notre méthode ($d$).}
+\caption{\label{fig::intro_image} Les rayons s'orientent vers les parties éclairées de la scène gr\^ace à notre squelette curviligne (image $b$), comparé à l'algorithme classique du lancer de rayon (image $a$). Les images $c$ et $d$ montrent le bruit généré par le lancer de rayons classique ($c$) et notre méthode ($d$).}
 \end{center}
 \end{figure*}
 
-\section{Introduction}
+Le lancer de rayons ou \emph{path tracing} est un algorithme de rendu utilisé en illumination globale. Il a été introduit par Kajiya en 1986~\cite{Kaj86} et  vise à générer des images photo-réalistes en mimant le comportement et les trajets de la lumière, au prix d'un temps de calcul relativement long, notamment dans le cas où la lumière est fortement indirecte. Si de nombreuses variantes ont été développées parmi lesquelles le \emph{bidirectional path tracing}~\cite{LW93}, le \emph{photon mapping}~\cite{Jen96}, le \emph{metropolis light transport}~\cite{VG97} ou encore l'emploi de \emph{virtual point lights}~\cite{Ke97}, le lancer de rayons reste toujours la méthode de référence comme le prouve l'emploi d'\emph{Arnold} (de la société \emph{Solid Angle}) chez \emph{Dreamworks}, les ouvrages comme~\cite{PBRT10} ou encore les récentes implantations GPU comme le moteur de rendu temps-réel \emph{Brigade}.
 
-Le lancer de rayons ou \emph{path tracing} est un algorithme de rendu utilisé en illumination globale. Il a été introduit par Kajiya en 1986~\cite{Kaj86} et  vise à générer des images photo-réalistes en mimant le comportement et les trajets de la lumière, au prix d'un temps de calcul relativement long, notamment dans le cas où la lumière est fortement indirecte. Si de nombreuses variantes ont été développées parmi lesquelles le \emph{bidirectional path tracing}~\cite{LW93}, le \emph{photon mapping}~\cite{Jen96}, le Metropolis Light Transport~\cite{VG97} ou encore l'emploi des Virtual Point Light~\cite{Ke97}, le \emph{path tracing} reste toujours la méthode de référence comme le prouve l'emploi d'Arnold chez Dreamworks ou les ouvrages comme~\cite{PBRT10}.
+Cet algorithme se fonde sur la résolution d'une équation intégrale appelée équation du rendu \cite{Kaj86}. Le calcul de luminosité se fait le long de directions échantillonnées à l'aide d'une densité de probabilité et l'intégrale est estimée grâce à la méthode de Monte-Carlo. Le choix de ces directions est crucial pour l'amélioration de la qualité du résultat et la réduction du bruit généré dans l'image finale. L'échantillonnage préférentiel (ou \emph{importance sampling}) est alors utilisé~\cite{Blasi94} afin de choisir des directions pertinentes pour accélérer la convergence de l'algorithme. Cette méthode exploite les informations disponibles sur la fonction à intégrer pour choisir préférentiellement des directions pour lesquelles la fonction est forte. Ces informations sont la plupart du temps dérivées du modèle de réflexion utilisé et des matériaux composant les surfaces. La distribution de lumière dans la scène est moins utilisée pour l'échantillonnage préférentiel car beaucoup plus difficile à exploiter. Or, les figure~\ref{fig::intro_image}.a et b illustrent que dans le cas de zones éloignées de la lumière, il devient nécessaire d'exploiter cette distribution de lumière.
 
-Cet algorithme se fonde sur la résolution d'une équation intégrale appelée équation du rendu. Le calcul de luminosité se fait le long de directions échantillonnées à l'aide d'une densité de probabilité et l'intégrale est estimée grâce à la méthode de Monte-Carlo. Le choix de ces directions est crucial pour l'amélioration de la qualité du résultat et la réduction du bruit généré dans l'image finale. L'échantillonnage préférentiel (\emph{importance sampling}) est alors utilisé~\cite{Blasi94} afin de choisir des directions pertinentes pour accélérer la convergence de l'algorithme. Cette méthode exploite les informations disponibles sur la fonction à intégrer pour choisir préférentiellement des directions pour lesquelles la fonction est forte. Ces informations sont la plupart du temps dérivées du modèle de réflexion utilisé et des matériaux composant les surfaces. Or la distribution de lumière dans la scène n'est que très peu utilisée pour l'échantillonnage préférentiel car beaucoup plus difficile à exploiter. Ainsi, les figure~\ref{fig::intro_image}.a et b illustrent que dans le cas de zones éloignées de la lumière, il devient nécessaire d'exploiter cette distribution de lumière.
+Plusieurs méthodes ont été développées afin de construire des chemins en accord avec la distribution de lumière. Des travaux~\cite{Jensen95,HP02} en ce sens exploitent une carte de photon afin de construire une estimation de l'irradiance affectant un point d'intersection lors du lancer de rayon. Cette estimation est utilisée afin d'échantillonner efficacement l'hémisphère autour du point en accord avec la distribution de lumière dans la scène. Cette méthode est efficace mais peut \^etre coûteuse en espace (stockage de la carte de photons) et de plus, ne peut \^etre exploitée que si le nombre de photons est suffisant ce qui n'est pas le cas dans des zones très occultées. Le \emph{bidirectional path tracing} \cite{LW93} construit des chemins en partant à la fois des lumières et de la caméra, permettant ainsi d'assurer une contribution non nulle le long de ces chemins. L'algorithme du \emph{metropolis light transport} \cite{VG97} exploite également cette idée en introduisant des opérateurs de mutation permettant l'exploration de nouveaux chemins à partir d'un chemin fortement lumineux déjà identifié. L'\emph{instant radiosity} \cite{Ke97} tente de répartir efficacement des points lumineux virtuels dans la scène en suivant des chemins partant des lumières. Ces points sont ensuite utilisés comme des sources de lumière primaire pour le rendu final. La luminosité indirecte est ainsi virtuellement transformée en contribution directe.
 
-Plusieurs méthodes ont été développées afin de construire des chemins en accord avec la distribution de lumière. Des travaux~\cite{Jensen95,HP02} en ce sens exploitent une carte de photon afin de construire une estimation de l'irradiance affectant un point d'intersection lors du lancer de rayon. Cette estimation est utilisée afin d'échantillonner efficacement l'hémisphère autour du point en accord avec la distribution de lumière dans la scène. Cette méthode est efficace mais peut \^etre coûteuse en espace (stockage de la carte de photons) et de plus, ne peut \^etre exploitée que si le nombre de photons est suffisant ce qui n'est pas le cas dans des zones très occultées. Le Bidirectional Pathtracing \cite{LW93} construit des chemins en partant à la fois des lumières et de la caméra	, permettant ainsi d'assurer une contribution non nulle le long de ces chemins. L'algorithme du Metropolis Light Transport \cite{VG97} exploite également cette idée en introduisant des opérateurs de mutation permettant l'exploration de nouveaux chemins à partir d'un chemin lumineux déjà identifié. L'Instant Radiosity \cite{Ke97} tente de répartir efficacement des points lumineux virtuels dans la scène en suivant des chemins depuis les lumières. Ces points sont ensuite utilisés comme des sources de lumière primaire pour le rendu final. La luminosité indirecte est ainsi transformée en lumière directe.
-
-Nous présentons une méthode d'échantillonnage pour l'algorithme du lancer de rayons \ref{Biri12}. Cette méthode est basé sur l'utilisation d'un squelette topologique curviligne du vide de la scène. Il nous permet de choisir des directions porteuses d'énergie lors d'un rebond et ainsi améliorer la vitesse de convergence de l'algorithme. La figure \ref{fig::intro_image} illustre la distribution des rayons dans la scène et la réduction du bruit obtenue avec notre algorithme. Notre méthode est complémentaire aux stratégies présentées ci-dessus dans le sens ou chacune d'entre elle peut être guidée par notre squelette. Nous introduisons ensuite une amélioration de la méthode en utilisant une stratégie d'échantillonnage préférentiel multiple combinant notre densité de probabilité construite à partir du squelette et une densité en accord avec le modèle de réflexion utilisé. Cette stratégie nous permet d'éliminer certains artefacts produits par la méthode originale et d'obtenir ainsi de meilleurs résultats.
+Nous présentons une méthode d'échantillonnage pour l'algorithme du lancer de rayons \cite{BIR12}. Cette méthode est basée sur l'utilisation d'un squelette topologique curviligne du vide de la scène. Il nous permet de choisir des directions porteuses d'énergie lors d'un rebond et ainsi améliorer la vitesse de convergence de l'algorithme. La figure \ref{fig::intro_image} illustre la distribution des rayons dans la scène et la réduction du bruit obtenue avec notre algorithme. Notre méthode est complémentaire aux stratégies présentées ci-dessus dans le sens ou chacune d'entre elles peut être guidée par notre squelette. Nous introduisons ensuite une amélioration de la méthode en utilisant une stratégie d'échantillonnage préférentiel multiple combinant notre densité de probabilité construite à partir du squelette et une densité en accord avec le modèle de réflexion utilisé. Cette stratégie nous permet d'éliminer certains artefacts produits par la méthode originale et d'obtenir ainsi de meilleurs résultats.
 
 \section{Lancer de rayons}
 
 \subsection{Principe général}
 
-Partant d'une caméra placé dans une scène virtuelle, on lance des rayons à travers l'image vue par la caméra. Ces rayons rebondissent dans la scène jusqu'à atteindre un maximum de rebonds fixé. On calcule la quantité de lumière traversant chacun des rayons en se basant sur un modèle de réflexion et sur les matériaux composant la scène. On obtient ainsi une couleur pour chaque rayon lancé nous permettant ainsi de construire une approximation de l'image. La qualité du résultat dépend du nombre de rayons lancés et des chemins traversés dans la scène.
+Depuis le centre optique d'une caméra placée dans une scène virtuelle, on lance des rayons à travers l'image observée par la caméra. Ces rayons rebondissent dans la scène jusqu'à atteindre un maximum de rebonds fixé. On calcule la quantité de lumière traversant chacun des rayons en se basant sur un modèle de réflexion et sur les matériaux composant la scène. On obtient ainsi une couleur pour chaque rayon lancé nous permettant ainsi de construire une approximation de l'image réelle. La qualité du résultat dépend du nombre de rayons lancés et des chemins traversés dans la scène.
 
 \subsection{Équation du rendu}
 
@@ -96,7 +99,7 @@ Le terme $L(x \rightarrow \Theta)$ représente la radiance en $x$ envoyée dans la
 \end{center}
 \end{figure}
 
-La radiance réfléchie $L_r(x \rightarrow \Theta)$ doit être calculée. Pour cela on intègre la radiance incidente $L(x \leftarrow \Phi)$ sur l'hémisphère $\Omega_x$ centré sur la normale $N_x$ en $x$. Avant d'être intégrée la radiance incidente est multipliée par le facteur $f_s(x, \Theta \leftrightarrow \Phi) = f_r(x, \Theta \leftrightarrow \Phi) cos(N_x, \Phi)$. La fonction $f_r$ est appelée fonction de réflectance bi-directionnelle (ou plus couramment BRDF pour "Bidirectional Reflectance Distribution Function"). Le terme $f_r(x, \Theta \leftrightarrow \Phi)$ exprime la proportion de lumière réflechie dans la direction $\Theta$ lorsque elle atteint $x$ selon la direction $\Phi$. C'est une quantité qui dépend du matériau en $x$. En pratique on la calcule à partir d'un modèle de réflexion et éventuellement de textures. Le cosinus atténue la lumière provenant des directions rasantes (il est maximal lorsque la direction d'incidence est la normale au point $x$).
+La radiance réfléchie $L_r(x \rightarrow \Theta)$ doit être calculée. Pour cela on doit prendre en compte la lumière arrivant en $x$, c'est à dire provenant des directions de l'hémisphère englobant $x$. On modélise donc ce calcul par une intégrale sur l'hémisphère $\Omega_x$ centré en $N_x$, la normale de la surface au point $x$. Pour chaque direction $\Phi$ de $\Omega_x$, $L(x \leftarrow \Phi)$ est la radiance incidente dans cette direction. Cette quantité est multipliée par le facteur $f_s(x, \Theta \leftrightarrow \Phi) = f_r(x, \Theta \leftrightarrow \Phi) cos(N_x, \Phi)$. La fonction $f_r$ est appelée fonction de réflectance bi-directionnelle (ou plus couramment BRDF pour \emph{bidirectional reflectance distribution function}). Le terme $f_r(x, \Theta \leftrightarrow \Phi)$ exprime la proportion de lumière réflechie dans la direction $\Theta$ lorsqu'elle affecte $x$ selon la direction $\Phi$. C'est une quantité qui dépend du matériau en $x$. En pratique on la calcule à partir d'un modèle de réflexion et éventuellement de textures. Le cosinus atténue la lumière provenant des directions rasantes (il est maximal lorsque la direction d'incidence est la normale au point $x$).
 
 Dans le vide la radiance reste constante le long des lignes droites ce qui nous permet d'exprimer la radiance incidente $L(x \leftarrow \Phi)$ en fonction de la radiance:
 
@@ -106,7 +109,7 @@ L(x \leftarrow \Phi) = L(r(x, \Phi) \rightarrow -\Phi)
 
 Le terme $r(x, \Phi)$ représente le point visible depuis $x$ dans la direction $\Phi$. En pratique on le calcule en lançant un rayon dans la scène et en cherchant l'intersection la plus proche.
 
-L'équation du rendu nous permet en théorie de calculer la radiance en tout point de surface et pour toute direction. En pratique, il n'existe pas de solution analytique et il est nécessaire d'utiliser des techniques d'approximation numérique pour calculer la partie intégrale de l'équation. La méthode la plus utilisée est l'intégration de Monte-Carlo qui nous fourni un estimateur général pour le calcul des intégrales.
+L'équation du rendu nous permet en théorie de calculer la radiance en tout point de surface et pour toute direction. En pratique, il n'existe pas de solution analytique et il est nécessaire d'utiliser des techniques d'approximation numérique pour calculer la partie intégrale de l'équation. La méthode la plus utilisée est l'intégration de Monte-Carlo qui fournit un estimateur général pour le calcul des intégrales.
 
 \subsection{Intégration de Monte-Carlo}
 
@@ -121,7 +124,7 @@ L'intégrateur de Monte-Carlo est fondé sur une distribution de probabilité $p$ n
 \langle F \rangle = \frac{1}{N} \sum_{i = 1}^{N} \frac{f(x_i)}{p(x_i)}
 \end{equation*}
 
-Cet estimateur est non-biaisé: l'espérance $E[\langle F \rangle]$ est égal à $F$ quelque soit le nombre d'échantillons et quelque soit la distribution de probabilité utilisée à condition que $p(x)$ soit non nul pour tout $x$ dès que $f(x)$ est non nul.
+Cet estimateur est non-biaisé: l'espérance $E[\langle F \rangle]$ est égale à $F$ quel que soit le nombre d'échantillons et quelle que soit la distribution de probabilité utilisée à condition que $p(x)$ soit non nul pour tout $x$ dès que $f(x)$ est non nul.
 
 La variance $\sigma^2[\langle F \rangle]$ de l'estimateur nous permet d'évaluer son efficacité. On a:
 
@@ -131,7 +134,7 @@ La variance $\sigma^2[\langle F \rangle]$ de l'estimateur nous permet d'évaluer 
 
 Plus cette variance est faible, meilleure est l'efficacité de l'estimateur. La partie intégrale de l'équation étant une constante, en augmentant le nombre d'échantillons on diminue la variance.
 
-L'algorithme du lancer de rayon stochastique utilise cette méthode pour estimer l'intégrale $L_r(x \rightarrow \Theta)$ avec $f(\Phi) = f_s(x, \Theta \leftrightarrow \Phi) L(r(x, \Phi) \rightarrow -\Phi)$. Malheureusement l'évaluation de l'intégrande entraîne un appel récursif de $L$. Cela nous impose de n'utiliser qu'un seul échantillon afin que l'algorithme n'ait pas une complexité exponentielle. L'estimateur utilisé en lancer de rayon est donc:
+L'algorithme du lancer de rayons stochastique utilise cette méthode pour estimer l'intégrale $L_r(x \rightarrow \Theta)$ avec $f(\Phi) = f_s(x, \Theta \leftrightarrow \Phi) L(r(x, \Phi) \rightarrow -\Phi)$. Malheureusement l'évaluation de l'intégrande entraîne un appel récursif de $L$. Cela nous impose de n'utiliser qu'un seul échantillon afin que l'algorithme n'ait pas une complexité exponentielle. L'estimateur utilisé en lancer de rayons est donc:
 
 \begin{equation*}
 \langle L_r(x \rightarrow \Theta) \rangle = \frac{f_s(x, \Theta \leftrightarrow \Phi) L(r(x, \Phi) \rightarrow -\Phi)}{p(\Phi)}
@@ -142,14 +145,14 @@ L'algorithme du lancer de rayon stochastique utilise cette méthode pour estimer 
 
 Une stratégie couramment utilisée pour réduire la variance de l'estimateur est d'utiliser une distribution $p$ adaptée à la fonction à intégrer. Cette méthode est appelée échantillonage préférentiel ou \emph{importance sampling}.
 
-Une distribution uniforme sur l'hémisphère ($p(\Phi) = \frac{1}{2\pi}$) conduit généralement à de mauvais résultats: lorsque peu de rayons sont lancés l'image de sortie est très bruitée. Cela est d\^u au fait que toutes les directions sont traitées de la m\^eme manière. Or l'intégrande est très faible pour certaines directions (par exemple les directions rasantes, le cosinus avec la normale étant nul; ou les directions n'apportant que peu d'énergie). Une bonne distribution doit donner aux directions, pour lesquelles l'intégrande est forte, plus de chances d'être choisies. Cela conduit à une réduction du bruit et une convergence plus rapide vers la véritable image.
+Une distribution uniforme sur l'hémisphère ($p(\Phi) = \frac{1}{2\pi}$) conduit généralement à de mauvais résultats: lorsque peu de rayons sont lancés l'image de sortie est très bruitée. Cela est d\^u au fait que toutes les directions sont traitées de la m\^eme manière. Or l'intégrande est très faible pour certaines directions (par exemple les directions rasantes, le cosinus avec la normale étant nul; ou les directions n'apportant que peu d'énergie). Une bonne distribution doit donner aux directions pour lesquelles l'intégrande est forte plus de chances d'être choisies. Cela conduit à une réduction du bruit et une convergence plus rapide vers la véritable image.
 
-Dans l'algorithme du lancer de rayon, la fonction a intégrer est un produit de deux fonctions:
+Dans l'algorithme du lancer de rayons, la fonction à intégrer est un produit de deux fonctions:
 \begin{equation*}
 f(\Phi) = f_s(x, \Theta \leftrightarrow \Phi) L(r(x, \Phi) \rightarrow -\Phi)
 \end{equation*}
 
-Malheureusement il est plus difficile de choisir une distribution adaptée à un produit qu'à une fonction simple. La solution la plus couramment utilisée est d'échantillonner en accord avec la fonction $f_s$. Ce choix se justifie par le fait que la fonction $f_s$ est souvent représentée par un modèle connu de réflexion et des textures. On peut donc utiliser cette donnée immédiatement, l'évaluation du terme $f_s(x, \Theta \leftrightarrow \Phi)$ se faisant en temps constant. Au contraire l'évaluation du terme $L(r(x, \Phi) \rightarrow -\Phi)$ conduit à relancer la récursion, sa valeur n'est donc pas immédiatement accessible.
+Malheureusement, il est plus difficile de choisir une distribution adaptée à un produit qu'à une fonction simple. La solution la plus couramment utilisée est d'échantillonner en accord avec la fonction $f_s$. Ce choix se justifie par le fait que la fonction $f_s$ est souvent représentée par un modèle connu de réflexion et des textures. On peut donc utiliser cette donnée immédiatement, l'évaluation du terme $f_s(x, \Theta \leftrightarrow \Phi)$ se faisant en temps constant. Au contraire, l'évaluation du terme $L(r(x, \Phi) \rightarrow -\Phi)$ relance la récursion, sa valeur n'est donc pas immédiatement accessible.
 
 Notre méthode conduit à la construction d'une distribution adaptée au terme $L(r(x, \Phi) \rightarrow -\Phi)$. La procédure est détaillée dans la section \ref{sec::skel_based_imp_sampling}.
 %
@@ -194,23 +197,26 @@ Notre méthode conduit à la construction d'une distribution adaptée au terme $L(r
 \section{Échantillonnage préférentiel guidé par le squelette du vide}
 \label{sec::skel_based_imp_sampling}
 
-Comme nous l'avons évoqué dans la section \ref{sec::importance_sampling}, notre objectif est de construire une densité de probabilité permettant d'échantillonner préférentiellement les directions porteuses d'énergie, c'est à dire les directions $\Phi$ pour lesquelles le terme $L(x \leftarrow \Phi)$ est fort. Notre méthode utilise un squelette topologique du vide de la scène pour identifier les chemins porteurs d'énergie. Ce squelette est pré-traité pour construire en ensemble de points d'importance. Ces points sont fournis en entrée de l'algorithme de lancer de rayons et nous permettent à chaque rebond de construire une distribution nous faisant rebondir vers eux.
+Comme nous l'avons évoqué dans la section \ref{sec::importance_sampling}, notre objectif est de construire une densité de probabilité permettant d'échantillonner préférentiellement les directions porteuses d'énergie, c'est à dire les directions $\Phi$ pour lesquelles le terme $L(x \leftarrow \Phi)$ est fort. Notre méthode utilise un squelette du vide de la scène pour identifier les chemins porteurs d'énergie. Ce squelette est pré-traité pour construire un ensemble de points d'importance. Ces points sont fournis en entrée de l'algorithme de lancer de rayons et nous permettent à chaque rebond de construire une distribution nous faisant rebondir dans leur direction.
 
-\blue{La lumière se déplace dans le vide de la scène. En pré-calculant une approximation de la distribution de lumière dans ce vide nous pouvons avoir une indication sur les chemins de plus forte énergie.} Pour que ce pré-calcul soit rapide, nous l'effectuons sur un squelette curviligne topologique du vide de la scène. Ce choix est justifié principalement par deux raisons:
+Le squelette utilisé est curviligne et possède la même topologie que le vide. Ces choix sont justifiés par deux raisons:
+
 \begin{itemize}
-\item Un squelette topologique possède la m\^eme topologie que l'objet initial. Il est important de garder la m\^eme topologie que le vide afin de ne pas emprunter des chemins inexistant (passant à travers les murs).
+
+\item Il est important de garder la même topologie que le vide afin de ne pas construire des chemins de lumière inexistants (passant à travers les murs).
 
 \item Un squelette curviligne est un objet à une dimension. Cela nous permet de le représenter à l'aide d'un graphe composé d'un nombre de n{\oe}uds réduit. Nous avons ainsi une représentation légère en mémoire et les pré-calculs sont rapides.
+
 \end{itemize}
 
 \subsection{Voxelisation et squelettisation}
 La première étape consiste à voxeliser la scène puis à inverser le résultat (les voxels pleins deviennent vides et inversement). L'inversion est nécessaire afin d'avoir une voxelisation du vide. Une telle voxelisation binaire peut se faire très rapidement~\cite{FBP09}.
 
-Un squelette d'un objet $X$ est un sous ensemble de points de $X$ possédant la même \emph{topologie} que $X$, c'est à dire en 3 dimensions le même nombre de composantes connexes, trous et cavités. De plus un squelette de $X$ doit être centré au sein de $X$ et au plus de dimension 2. Les travaux en squelettisation se concentrent sur l'obtention d'un squelette ressemblant géométriquement à l'objet initial: dans ce cas la difficulté est d'obtenir un squelette ne comportant pas d'artefacts pouvant être vu comme du bruit.
+Un squelette d'un objet $X$ est un sous ensemble de points de $X$ possédant la même \emph{topologie} que $X$, c'est à dire en 3 dimensions le même nombre de composantes connexes, trous et cavités. De plus un squelette de $X$ doit être centré au sein de $X$ et au plus de dimension 2. Les travaux en squelettisation se concentrent sur l'obtention d'un squelette ressemblant géométriquement à l'objet initial: dans ce cas la difficulté est d'obtenir un squelette ne comportant pas d'artefacts pouvant être vus comme du bruit.
 
-Les travaux récent en squelettisation se placent dans le cadre des cubiques complexes afin d'obtenir un squelette robuste~\cite{BC06a}. Nous utilisons l'algorithme de squelettisation présenté dans~\cite{CC09} prenant en entrée un objet voxélisé et produisant un squelette de dimension inférieure centré dans l'objet et représenté par un cubique complexe. Nous avons modifié l'algorithme dans le but de ne conserver que les éléments de dimension 1 conduisant ainsi à l'obtention d'un squelette curviligne.
+Les travaux récents en squelettisation se placent dans le cadre des cubiques complexes afin d'obtenir un squelette robuste~\cite{BC06a}. Nous utilisons l'algorithme de squelettisation présenté dans~\cite{CC09} prenant en entrée un objet voxélisé et produisant un squelette de dimension inférieure centré dans l'objet et représenté par un cubique complexe. Nous avons modifié l'algorithme dans le but de ne conserver que les éléments de dimension 1 conduisant ainsi à l'obtention d'un squelette curviligne.
 
-Le squelette est filtré en utilisant notre méthode présenté dans \cite{Chaussard_phd}. Cette méthode ne requiert aucun paramètre d'entrée: durant la squelettisation nous calculons l?espérance de vie de chaque point de l'objet (le nombre d'itérations nécessaires pour supprimer le point du squelette). Nous calculons également pour chaque point $p$ de l'objet la taille de la boule maximale contenant dans l'objet et contenant $p$ (appelée la valeur d'ouverture de $p$). Le filtrage consiste à garder durant la squelettisation tous les points ayant une espérance de vie supérieure à leur valeur d'ouverture. Cela nous permet d'obtenir un squelette robuste au bruit et conservant l'aspect visuel de l'objet original.
+Le squelette est filtré en utilisant notre méthode présentée dans \cite{Chaussard_phd}. Cette méthode ne requiert aucun paramètre d'entrée: durant la squelettisation nous calculons l'espérance de vie de chaque point de l'objet (le nombre d'itérations nécessaires pour supprimer le point du squelette). Nous calculons également pour chaque point $p$ de l'objet la taille de la boule maximale contenant dans l'objet et contenant $p$ (appelée la valeur d'ouverture de $p$). Le filtrage consiste à garder durant la squelettisation tous les points ayant une espérance de vie supérieure à leur valeur d'ouverture. Cela nous permet d'obtenir un squelette robuste au bruit et conservant l'aspect visuel de l'objet original.
 
 %A skeleton of an object $X$ is a subset of points of $X$ that possesses the same \textit{topology} of $X$, that is, in 3d, the same number of connected components, holes and cavities. Moreover, a skeleton of $X$ should be centered in $X$ and at most two-dimensional. Some works on skeletonization focus on obtaining a skeleton which \textit{looks like} the object : in this case, the difficulty lies in obtaining a skeleton devoided of spurious elements, which can be seen as noise.
 %
@@ -218,7 +224,7 @@ Le squelette est filtré en utilisant notre méthode présenté dans \cite{Chaussard
 %
 %The skeleton is filtered using our technique explained in \cite{Chaussard_phd}, which requires no user input: during the skeletonization, we calculate the lifespan of each point of the object (the number of iterations necessary to remove a point from the skeleton). We also compute for each point $p$ of the object, the size of the biggest ball included in the object and containing $p$ (called opening value of $p$). The filtering consists in keeping, during skeletonization, all points whose lifespan is superior to their opening value. This provides a noise robust skeleton relevant of the object visual aspect.
 
-La dernière étape consiste à convertir le squelette obtenu (représenté par un cubique complexe) en un graphe dont les n\oe uds sont des points de $\mathbb{R}^3$ et dont les arrêtes encodent la topologie de la scène. La figure \ref{fig::skeleton} illustre le squelette curviligne du vide de Sponza. On observe que la topologie est bien conservée (le squelette passe entre chacun des piliers) et qu'il est bien centré dans la scène, conservant ainsi une apparence visuelle proche de la scène.
+La dernière étape consiste à convertir le squelette obtenu (représenté par un cubique complexe) en un graphe dont les n\oe uds sont des points de $\mathbb{R}^3$ et dont les arrêtes encodent la topologie du vide. La figure \ref{fig::skeleton} illustre le squelette curviligne du vide de Sponza. On observe que la topologie est bien conservée (le squelette passe entre chacun des piliers) et qu'il est bien centré dans la scène, conservant ainsi une apparence visuelle proche de la scène.
 
 \begin{figure}[t!]
 \begin{center}
@@ -227,20 +233,20 @@ La dernière étape consiste à convertir le squelette obtenu (représenté par un cu
 \end{center}
 \end{figure}
 
-En plus du squelette nous conservons une grille 3D couvrant la scène. Nous stockons dans chaque case de cette grille l'indice du n\oe d du squelette le plus proche. Ainsi nous pouvons récupérer en temps constant le n\oe ud le plus proche de chaque point 3D de la scène.
+En plus du squelette nous conservons une grille 3D couvrant la scène. Nous stockons dans chaque case de cette grille l'indice du n\oe ud du squelette le plus proche. Ainsi nous pouvons récupérer en temps constant le n\oe ud le plus proche de chaque point 3D de la scène.
 
 \subsection{Calcul des points d'importance}
 
 Soit $G = (V, E)$ le graphe représentant le squelette. Pour chaque n\oe ud $n \in V$ un point d'importance $imp_n$ est construit en direction de la lumière $L$. 
 
-Soit $n_L$ le n\oe ud le plus proche de la lumière. On commence par calculer un arbre des plus cours chemins de racine $n_L$. Pour cela on utilise l'algorithme de Dijkstra et une distance $d$ basée sur l'illumination. Soit $u = (u_1, u_2) \in E$ une arrête du graphe. Si le n\oe ud $u_2$ est visible depuis $n_L$ on fixe $d(u) = 1$, sinon $d(u) = 10$. Ainsi les chemins illuminés ont une distance associée plus courte et nous conduisent plus rapidement à la lumière. A l'issue de cette étape on possède pour chaque n\oe ud le plus court chemin vers le n\oe ud $n_L$.
+Soit $n_L$ le n\oe ud le plus proche de la lumière. On commence par calculer un arbre des plus courts chemins de racine $n_L$. Pour cela on utilise l'algorithme de Dijkstra \cite{Dij71} et une distance $d$ basée sur l'illumination. Soit $u = (u_1, u_2) \in E$ une arête du graphe. Si le n\oe ud $u_2$ est visible depuis $n_L$ on fixe $d(u) = 1$, sinon $d(u) = 10$. Ainsi les chemins illuminés ont une distance associée plus courte et nous conduisent plus rapidement à la lumière. À l'issue de cette étape on possède pour chaque n\oe ud le plus court chemin vers le n\oe ud $n_L$.
 
 Soit $n$ un n\oe ud du graphe. On note $V(n)$ l'ensemble des n\oe uds visibles depuis $n$ le long du plus court chemin vers $n_L$. Le point d'importance $imp_n$ associé à $n$ est le barycentre de $V(n)$ (voir figure \ref{fig::importance_points}).
 
 \begin{figure}[t!]
 \begin{center}
 \myincludegraphics{0.3\textwidth}{importance_points.pdf}
-\caption{\label{fig::importance_points} Construction des points d'importances. Les points visibles depuis $n$ le long du plus court chemin jusqu'à sont encadrés en vert. Leur barycentre est le point d'importance $imp_n$ associé à $n$.}
+\caption{\label{fig::importance_points} Construction des points d'importance. Les points visibles depuis \emph{$n$} le long du plus court chemin jusqu'à la lumière sont encadrés en vert. Leur barycentre est le point d'importance \emph{$imp_n$} associé à \emph{$n$}.}
 \end{center}
 \end{figure}
 
