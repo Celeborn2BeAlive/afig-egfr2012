@@ -33,7 +33,7 @@
 	    John Chaussard $^2$, 
 	    Venceslas Biri $^1$
 	    \\
-		$^1$ Universit\'{e} Paris Est, LIGM, A3SI-ESIEE \\ 2, boulevard Blaise Pascal, 93162 				Noisy le Grand CEDEX, France \\ laurent.noel@esiee.fr, v.biri@esiee.fr
+		$^1$ Universit\'{e} Paris Est, LIGM, A3SI-ESIEE \\ 2, boulevard Blaise Pascal, 93162 				Noisy le Grand CEDEX, France \\ laurent.noel@univ-paris-est.fr, v.biri@esiee.fr
 		\\
 		$^2$ Universit\'{e} Paris 13, Sorbonne Paris Cit\'{e}, LAGA, CNRS(UMR 7539), \\ F-93430, 			Villetaneuse, France \\ chaussard@math.univ-paris13.fr}
 
@@ -271,12 +271,12 @@ Notre méthode conduit à une bonne réduction du bruit, en particulier dans les zo
 \end{center}
 \end{figure*}
 
-Un artefact apparaît néanmoins: les speckles. Les speckles sont des pixels anormalement illuminés dus à un mauvais échantillonnage. Lorsqu'une direction possédant une forte valeur mais une faible probabilité est choisie, l'estimateur de Monte-Carlo donne une valeur élevée conduisant à l'apparition d'un speckle. Ce type d'artefact s'estompe en augmentant le nombre de rayons par pixels (dû à la convergence de l'estimateur). Une solution simple pour supprimer ces artefacts est de borner l'illumination à une valeur fixée. On introduit alors un biais dans la méthode puisque une partie de l'énergie lumineuse ne sera jamais distribué. Une meilleure solution est présenté dans la section \ref{sec::MIS}.
+Un artefact apparaît néanmoins: les speckles. Les speckles sont des pixels anormalement illuminés. Cela est dû à un mauvais échantillonnage. Lorsqu'une direction possédant une forte valeur mais une faible probabilité est choisie, l'estimateur de Monte-Carlo donne une valeur trop élevée conduisant à l'apparition d'un speckle. Ce type d'artefact s'estompe en augmentant le nombre de rayons par pixels (dû à la convergence de l'estimateur). Une solution simple pour supprimer ces artefacts est de borner l'illumination à une valeur fixée. On introduit alors un biais dans la méthode puisque une partie de l'énergie lumineuse ne sera jamais distribuée. Une meilleure solution est présentée dans la section \ref{sec::MIS}.
 
 D'autre part, plusieurs cas pathologiques, relativement rares, peuvent nous conduire à nous rabattre sur un échantillonnage basé sur la BRDF:
 \begin{itemize}
-\item La direction d'importance peut pointer du coté opposé à la normale en $x$. Cela signifie que le point d'importance est situé de l'autre coté de la surface.
-\item Le point d'importance peut ne pas être visible depuis $x$. Dans ce cas il est inutile de tirer aux alentours de sa direction car notre rayon a de forte chances d'être intersecté avant d'atteindre la lumière.
+\item La direction d'importance peut pointer du côté opposé à la normale en $x$. Cela signifie que le point d'importance est situé de l'autre côté de la surface.
+\item Le point d'importance peut ne pas être visible depuis $x$. Dans ce cas il est inutile de tirer aux alentours de sa direction car notre rayon a de fortes chances d'être intersecté avant d'atteindre la lumière.
 \end{itemize}
 
 Enfin, en concentrant nos tirs de rayons vers les zones éclairées de la scène, nous pouvons rater des échanges lumineux entre surfaces proches comme le montre la figure~\ref{fig::figure_correction_MIS}.
@@ -297,20 +297,20 @@ Ces problèmes nous ont naturellement conduit à exploiter une autre solution appe
 \end{center}
 \end{figure*}
 
-Comme nous l'avons évoqué dans la section précédente, notre méthode conduit à l'apparition de speckles. Le fait d'ignorer totalement la BRDF au moment d'échantillonner est une des causes de l'apparition de cet artefact. D'autre part,  Nous proposons d'utiliser une méthode appelée échantillonnage préférentiel multiple (MIS pour \emph{Multiple Importance Sampling}) pour prendre en compte à la fois notre stratégie d'échantillonnage par squelette curviligne et celle fondée sur la BRDF.
+Comme nous l'avons évoqué dans la section précédente, notre méthode conduit à l'apparition de speckles. Le fait d'ignorer totalement la BRDF au moment d'échantillonner est une des causes de l'apparition de cet artefact. Nous proposons donc d'utiliser une méthode appelée échantillonnage préférentiel multiple (MIS pour \emph{multiple importance sampling}) pour prendre en compte à la fois notre stratégie d'échantillonnage par squelette curviligne et celle fondée sur la BRDF.
 
 \subsection{Cadre théorique}
 
 Le MIS est une technique utilisée pour échantillonner efficacement dans le cas de produit de fonctions comme c'est le cas pour le lancer de rayons. L'idée est d'utiliser une densité de probabilité construite à partir de la combinaison de plusieurs densités adaptées à chacun des facteurs de la fonction.
 
-Soit $f(x) = f_1(x)f_2(x)...f_n(x)$ une fonction à intégrer sur un domaine $D$. Soit $p_1, ..., p_n$ les densités de probabilités adaptées à chacune des fonctions $f_i$.
+Soit $f(x) = f_1(x)f_2(x)...f_n(x)$ une fonction à intégrer sur un domaine $D$. Soit $p_1, ..., p_n$ les densités de probabilité adaptées à chacune des fonctions $f_i$.
 L'estimateur combiné pour l'intégrale de $f$ est:
 
 \begin{equation*}
 \langle F \rangle = \frac{\omega_I(X_I)f(X_I)}{c_Ip_I(X_I)}, I = min\{i~ |~ U < \sum_{j=1}^{i} c_j \}
 \end{equation*}
 
-Les $\omega_i$ sont des fonctions de pondération positives telles que $\sum_i \omega_i = 1$ et les $c_i$ des probabilités associées à chacune des fonctions $f_i$. Le nombre réel $U$ est choisi aléatoirement et uniformément dans l'intervalle $[0,1]$. Cet estimateur est non biaisé et permet de construire une famille de stratégies d'échantillonnage en modifiant les $\omega_i$ et les $c_i$.
+Les $\omega_i$ sont des fonctions de pondération positives telles que $\sum_i \omega_i = 1$ et les $c_i$ des probabilités associées à chacune des densités $p_i$. Le nombre réel $U$ est choisi aléatoirement et uniformément dans l'intervalle $[0,1]$. Cet estimateur est non biaisé et permet de construire une famille de stratégies d'échantillonnage en modifiant les $\omega_i$ et les $c_i$.
 
 L'idée derrière cet estimateur est simple: on choisit aléatoirement une stratégie $p_I$ en se basant sur les probabilités $c_i$. Cette stratégie est utilisée pour tirer un échantillon $X_I$. Cet échantillon est alors utilisé pour calculer l'estimation.
 
@@ -328,13 +328,13 @@ L'utilisation de ces fonctions conduit à l'estimateur suivant appelé "balance he
 
 \subsection{Utilisation de la méthode}
 
-Dans le cas du lancer de rayon la fonction a intégrer est:
+Dans le cas du lancer de rayons la fonction à intégrer est:
 
 \begin{equation*}
 f(\Phi) = f_s(x, \Theta \leftrightarrow \Phi) L(x \leftarrow \Phi)
 \end{equation*}
 
-Notre méthode nous à conduit à la densité $p_{skel}$ pour échantillonner en accord avec $L$. Un grand nombre de stratégies ont été étudiées pour échantillonner efficacement en accord avec $f_s$ en fonction du modèle de réflexion utilisé. N'importe quelle densité $p_s$ adaptée à $f_s$ peut être utilisée. L'estimateur est alors le suivant:
+Notre méthode nous a conduit à la densité $p_{skel}$ pour échantillonner en accord avec $L$. Un grand nombre de stratégies ont été étudiées pour échantillonner efficacement en accord avec $f_s$ en fonction du modèle de réflexion utilisé. N'importe quelle densité $p_s$ adaptée à $f_s$ peut être choisie. L'estimateur est alors le suivant:
 
 \begin{equation*}
 \langle L_r(x \rightarrow \Theta) \rangle = \frac{f_s(x, \Theta \leftrightarrow \Phi) L(x \leftarrow \Phi)}{c_{skel}p_{skel}(\Phi) + (1 - c_{skel})p_s(\Phi)}
@@ -342,11 +342,11 @@ Notre méthode nous à conduit à la densité $p_{skel}$ pour échantillonner en acco
 
 La direction $\Phi$ est échantillonnée avec la densité choisie uniformément selon les probabilités $c_{skel}$ et $1 - c_{skel}$.
 
-Le paramètre $c_{skel}$ peut être fixé ou bien être calculé en fonction du point $x$ (par rapport à la distance à la lumière par exemple).
+Le paramètre $c_{skel}$ peut être fixé ou bien calculé en fonction du point $x$ (par exemple par rapport à la distance à la lumière).
 
 \subsection{Résultats et discussion}
 
-L'emploi du MIS conduit à une forte réduction des speckles comme le montre la figure \ref{fig::MIS_couloir}. On peut observer un très grand nombre de speckles d\^u au paramètre $s = 2$, entraînant une plus forte concentration autour de la direction d'importance. Le MIS supprime ces speckles tout en conservant la réduction du bruit comme on peut le voir sur le mur de gauche. Les valeurs de MSE confirme ces observations: les speckles constituent les artefacts majeurs de notre méthode originale et leur suppression est cruciale pour l'amélioration des images calculées.
+L'emploi du MIS conduit à une forte réduction des speckles comme le montre la figure \ref{fig::MIS_couloir}. On peut observer un très grand nombre de speckles d\^u au paramètre $s = 2$, entraînant une plus forte concentration autour de la direction d'importance. Le MIS supprime ces speckles tout en conservant la réduction du bruit comme on peut le voir sur le mur de gauche. Les valeurs de MSE confirment ces observations: les speckles constituent l'artefact majeur de notre méthode originale et leur suppression est cruciale pour l'amélioration des images calculées.
 
 \begin{figure*}[t!]
 \begin{center}
@@ -359,15 +359,15 @@ L'emploi du MIS conduit à une forte réduction des speckles comme le montre la fi
 \end{center}
 \end{figure*}
 
-La figure \ref{fig::figure_correction_MIS} est un gros plan sur le coin du couloir. La méthode originale donne un résultat plus sombre que celui obtenu avec le lancer de rayons standard. Cet artefact est du au fait que l'on échantillonne pas l'hémisphère complet autour du point d'impact mais seulement une sous partie centrée autour de la direction d'importance. Au contraire le MIS permet de visiter la totalité des chemins de lumière (si la densité de probabilité utilisée pour le modèle de réflexion est valide).
+La figure \ref{fig::figure_correction_MIS} est un gros plan sur le coin du couloir. La méthode originale donne un résultat plus sombre que celui obtenu avec le lancer de rayons standard. Cet artefact est dû au fait que l'on n'échantillonne pas l'hémisphère complet autour du point d'impact mais seulement une sous partie centrée autour de la direction d'importance. Au contraire le MIS permet de visiter la totalité des chemins de lumière (si la densité de probabilité utilisée pour le modèle de réflexion est valide).
 
 \section{Conclusion et travaux futurs}
 
-Nous avons montré que l'utilisation d'un squelette curviligne du vide de la scène permet d'extraire des informations pertinentes sur la distribution de lumière dans la scène. Ces informations nous permettent d'échantillonner efficacement des chemins porteur d'énergie dans la scène. La méthode génère néanmoins des artefacts du fait que l'on ignore totalement les propriétés locales de réflexion associées au points d'impacts. L'emploi de l'échantillonnage préférentiel multiple permet de corriger ces artefacts en combinant notre stratégie et la stratégie associée au modèle de réflexion.
+Nous avons montré que l'utilisation d'un squelette curviligne du vide de la scène permet d'extraire des informations pertinentes sur la distribution de lumière. Ces informations nous permettent d'échantillonner efficacement des chemins porteur d'énergie dans la scène. La méthode génère néanmoins des artefacts du fait que l'on ignore totalement les propriétés locales de réflexion associées aux points d'impacts. L'emploi de l'échantillonnage préférentiel multiple permet de corriger ces artefacts en combinant notre stratégie et la stratégie associée au modèle de réflexion.
 
-Le paramètre $c_{skel}$ utilisé dans le MIS permet de pondérer l'utilisation du squelette par rapport aux caractéristiques locales. Nous avons utilisé des valeurs fixes pour nos résultats. Or il est évident que faire varier la contribution du squelette en fonction de la position dans la scène peut permettre d'obtenir de meilleurs résultats. Par exemple il est inutile de l'utiliser dans les zones directement éclairées puisque la lumière est déjà atteinte: il suffit de calculer la contribution directe pour optimiser l'estimation. Nous cherchons a identifier des stratégies pour faire varier ce paramètre, par exemple par rapport à la distance à la lumière ou aux occlusions locales.
+Le paramètre $c_{skel}$ utilisé dans le MIS permet de pondérer l'utilisation du squelette par rapport aux caractéristiques locales. Nous avons utilisé des valeurs fixes pour nos résultats. Or il est évident que faire varier la contribution du squelette en fonction de la position dans la scène peut permettre d'obtenir de meilleurs résultats. Par exemple, il est inutile de l'utiliser dans les zones directement éclairées puisque la lumière est déjà atteinte: il suffit de calculer la contribution directe pour optimiser l'estimation. Nous cherchons à identifier des stratégies pour faire varier ce paramètre, par exemple par rapport à la distance à la lumière ou aux occlusions locales.
 
-Nous nous orientons également vers l'utilisation du squelette pour d'autres algorithmes d'illumination globale, en particulier les algorithme basés sur les virtual point lights ou sur le photon mapping. Le squelette peut nous permettre de guider plus efficacement les photons vers la caméra ou bien de placer les VPLs de manière à maximiser leur contribution à l'image finale.
+Nous nous orientons également vers l'utilisation du squelette pour d'autres algorithmes d'illumination globale, en particulier les algorithmes basés sur les \emph{virtual point lights} ou sur le \emph{photon mapping}. Le squelette peut nous permettre de guider plus efficacement les photons vers la caméra ou bien de placer les VPLs de manière à maximiser leur contribution à l'image finale.
 
 %-------------------------------------------------------------------------
 \newpage
