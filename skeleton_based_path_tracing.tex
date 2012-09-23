@@ -271,7 +271,9 @@ Notre méthode conduit à une bonne réduction du bruit, en particulier dans les zo
 \end{center}
 \end{figure*}
 
-\begin{table}[t!]
+Le tableau~\ref{tab::couts} indique les co\^uts supplémentaire en terme de mémoire et de temps de calcul associées aux scène Sponza et Corridor. Le temps indiqué inclut la voxelisation, la squelettisation et le calcul des points d'importance. Ce dernier est négligeable comparé aux deux premiers. Notre algorithme de squelettisation n'a pas encore été parallélisé, ce qui explique le temps de calcul relativement élevé.
+
+\begin{table}[b!]
 \centering
 \begin{tabular}{|l|c|c|c|}
 \hline
@@ -283,13 +285,28 @@ Corridor& 18 MB & 93x205x250 & 13s \\
 Sponza& 130 MB & 210x308x500 & 30s \\
 \hline
 \end{tabular}
-\caption{Coûts associés aux scène Sponza et Corridor}
+\caption{Coûts associés aux scène Sponza et Corridor (image la plus à gauche sur la figure~\ref{fig::four_scenes})}
 \label{tab::couts}
 \end{table}
 
-Le tableau~\ref{tab::couts} indique les co\^uts supplémentaire en terme de mémoire et de temps de calcul associées aux scène Sponza et Corridor. Le temps indiqué inclut la voxelisation, la squelettisation et le calcul des points d'importance. Ce dernier est négligeable comparé aux deux premiers. Notre algorithme de squelettisation n'a pas encore été parallélisé, ce qui explique le temps de calcul relativement élevé.
+Au niveau des temps de calcul associés au rendu, le tableau~\ref{tab::timing} indique les temps requis pour atteindre différentes valeurs de MSE entre nos résultats et une image de référence. Notre méthode converge plus rapidement que l'algorithme standard.
 
-Notre méthode produit un artefact: les speckles. Les speckles sont des pixels anormalement illuminés. Cela est dû à un mauvais échantillonnage. Lorsqu'une direction possédant une forte valeur mais une faible probabilité est choisie, l'estimateur de Monte-Carlo donne une valeur trop élevée conduisant à l'apparition d'un speckle. Ce type d'artefact s'estompe en augmentant le nombre de rayons par pixels (dû à la convergence de l'estimateur). Une solution simple pour supprimer ces artefacts est de borner l'illumination à une valeur fixée. On introduit alors un biais dans la méthode puisque une partie de l'énergie lumineuse ne sera jamais distribuée. Une meilleure solution est présentée dans la section~\ref{sec::MIS}.
+\begin{table}[b!]
+\centering
+\begin{tabular}{|c|c|c|c|}
+\hline
+Scene & Corridor 1 & Corridor 2 & Sponza \\
+\hline
+MSE 100& 145 / 57 & 301 / 156 & 881 / 826 \\
+\hline
+MSE 40& 434 / 260 & 924 / 628 & 2678 / 2570 \\
+\hline
+\end{tabular}
+\caption{Comparaison des temps de calcul pour obtenir un MSE de 100 et de 40 avec les images de référence. Dans chacune des cases le nombre de gauche est le temps associé au lancer de rayons standard, celui de droite est celui associé à notre méthode.}
+\label{tab::timing}
+\end{table}
+
+Notre méthode produit néammoins un artefact: les speckles. Les speckles sont des pixels anormalement illuminés. Cela est dû à un mauvais échantillonnage. Lorsqu'une direction possédant une forte valeur mais une faible probabilité est choisie, l'estimateur de Monte-Carlo donne une valeur trop élevée conduisant à l'apparition d'un speckle. Ce type d'artefact s'estompe en augmentant le nombre de rayons par pixels (dû à la convergence de l'estimateur). Une solution simple pour supprimer ces artefacts est de borner l'illumination à une valeur fixée. On introduit alors un biais dans la méthode puisque une partie de l'énergie lumineuse ne sera jamais distribuée. Une meilleure solution est présentée dans la section~\ref{sec::MIS}.
 
 D'autre part, plusieurs cas pathologiques, relativement rares, peuvent nous conduire à nous rabattre sur un échantillonnage basé sur la BRDF:
 \begin{itemize}
