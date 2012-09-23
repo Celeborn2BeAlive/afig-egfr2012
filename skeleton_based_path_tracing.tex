@@ -66,11 +66,11 @@ Nous présentons une méthode d'échantillonnage préférentiel pour l'algorithme du 
 
 Le lancer de rayons ou \emph{path tracing} est un algorithme de rendu utilisé en illumination globale. Il a été introduit par Kajiya en 1986~\cite{Kaj86} et  vise à générer des images photo-réalistes en mimant le comportement et les trajets de la lumière, au prix d'un temps de calcul relativement long, notamment dans le cas où la lumière est fortement indirecte. Si de nombreuses variantes ont été développées parmi lesquelles le \emph{bidirectional path tracing}~\cite{LW93}, le \emph{photon mapping}~\cite{Jen96}, le \emph{metropolis light transport}~\cite{VG97} ou encore l'emploi de \emph{virtual point lights}~\cite{Ke97}, le lancer de rayons reste toujours la méthode de référence comme le prouve l'emploi d'\emph{Arnold} (de la société \emph{Solid Angle}) chez \emph{Dreamworks}, les ouvrages comme~\cite{PBRT10} ou encore les récentes implantations GPU comme le moteur de rendu temps-réel \emph{Brigade}.
 
-Cet algorithme se fonde sur la résolution d'une équation intégrale appelée équation du rendu \cite{Kaj86}. Le calcul de luminosité se fait le long de directions échantillonnées à l'aide d'une densité de probabilité et l'intégrale est estimée grâce à la méthode de Monte-Carlo. Le choix de ces directions est crucial pour l'amélioration de la qualité du résultat et la réduction du bruit généré dans l'image finale. L'échantillonnage préférentiel (ou \emph{importance sampling}) est alors utilisé~\cite{Blasi94} afin de choisir des directions pertinentes pour accélérer la convergence de l'algorithme. Cette méthode exploite les informations disponibles sur la fonction à intégrer pour choisir préférentiellement des directions pour lesquelles la fonction est forte. Ces informations sont la plupart du temps dérivées du modèle de réflexion utilisé et des matériaux composant les surfaces. La distribution de lumière dans la scène est moins utilisée pour l'échantillonnage préférentiel car beaucoup plus difficile à exploiter. Or, les figure~\ref{fig::intro_image}.a et b illustrent que dans le cas de zones éloignées de la lumière, il devient nécessaire d'exploiter cette distribution de lumière.
+Cet algorithme se fonde sur la résolution d'une équation intégrale appelée équation du rendu~\cite{Kaj86}. Le calcul de luminosité se fait le long de directions échantillonnées à l'aide d'une densité de probabilité et l'intégrale est estimée grâce à la méthode de Monte-Carlo. Le choix de ces directions est crucial pour l'amélioration de la qualité du résultat et la réduction du bruit généré dans l'image finale. L'échantillonnage préférentiel (ou \emph{importance sampling}) est alors utilisé~\cite{Blasi94} afin de choisir des directions pertinentes pour accélérer la convergence de l'algorithme. Cette méthode exploite les informations disponibles sur la fonction à intégrer pour choisir préférentiellement des directions pour lesquelles la fonction est forte. Ces informations sont la plupart du temps dérivées du modèle de réflexion utilisé et des matériaux composant les surfaces. La distribution de lumière dans la scène est moins utilisée pour l'échantillonnage préférentiel car beaucoup plus difficile à exploiter. Or, les figure~\ref{fig::intro_image}.a et b illustrent que dans le cas de zones éloignées de la lumière, il devient nécessaire d'exploiter cette distribution de lumière.
 
-Plusieurs méthodes ont été développées afin de construire des chemins en accord avec la distribution de lumière. Des travaux~\cite{Jensen95,HP02} en ce sens exploitent une carte de photon afin de construire une estimation de l'irradiance affectant un point d'intersection lors du lancer de rayon. Cette estimation est utilisée afin d'échantillonner efficacement l'hémisphère autour du point en accord avec la distribution de lumière dans la scène. Cette méthode est efficace mais peut \^etre coûteuse en espace (stockage de la carte de photons) et de plus, ne peut \^etre exploitée que si le nombre de photons est suffisant ce qui n'est pas le cas dans des zones très occultées. Le \emph{bidirectional path tracing} \cite{LW93} construit des chemins en partant à la fois des lumières et de la caméra, permettant ainsi d'assurer une contribution non nulle le long de ces chemins. L'algorithme du \emph{metropolis light transport} \cite{VG97} exploite également cette idée en introduisant des opérateurs de mutation permettant l'exploration de nouveaux chemins à partir d'un chemin fortement lumineux déjà identifié. L'\emph{instant radiosity} \cite{Ke97} tente de répartir efficacement des points lumineux virtuels dans la scène en suivant des chemins partant des lumières. Ces points sont ensuite utilisés comme des sources de lumière primaire pour le rendu final. La luminosité indirecte est ainsi virtuellement transformée en contribution directe.
+Plusieurs méthodes ont été développées afin de construire des chemins en accord avec la distribution de lumière. Des travaux~\cite{Jensen95,HP02} en ce sens exploitent une carte de photon afin de construire une estimation de l'irradiance affectant un point d'intersection lors du lancer de rayon. Cette estimation est utilisée afin d'échantillonner efficacement l'hémisphère autour du point en accord avec la distribution de lumière dans la scène. Cette méthode est efficace mais peut \^etre coûteuse en espace (stockage de la carte de photons) et de plus, ne peut \^etre exploitée que si le nombre de photons est suffisant ce qui n'est pas le cas dans des zones très occultées. Le \emph{bidirectional path tracing}~\cite{LW93} construit des chemins en partant à la fois des lumières et de la caméra, permettant ainsi d'assurer une contribution non nulle le long de ces chemins. L'algorithme du \emph{metropolis light transport}~\cite{VG97} exploite également cette idée en introduisant des opérateurs de mutation permettant l'exploration de nouveaux chemins à partir d'un chemin fortement lumineux déjà identifié. L'\emph{instant radiosity}~\cite{Ke97} tente de répartir efficacement des points lumineux virtuels dans la scène en suivant des chemins partant des lumières. Ces points sont ensuite utilisés comme des sources de lumière primaire pour le rendu final. La luminosité indirecte est ainsi virtuellement transformée en contribution directe.
 
-Nous présentons une méthode d'échantillonnage pour l'algorithme du lancer de rayons \cite{BIR12}. Cette méthode est basée sur l'utilisation d'un squelette topologique curviligne du vide de la scène. Il nous permet de choisir des directions porteuses d'énergie lors d'un rebond et ainsi améliorer la vitesse de convergence de l'algorithme. La figure \ref{fig::intro_image} illustre la distribution des rayons dans la scène et la réduction du bruit obtenue avec notre algorithme. Notre méthode est complémentaire aux stratégies présentées ci-dessus dans le sens ou chacune d'entre elles peut être guidée par notre squelette. Nous introduisons ensuite une amélioration de la méthode en utilisant une stratégie d'échantillonnage préférentiel multiple combinant notre densité de probabilité construite à partir du squelette et une densité en accord avec le modèle de réflexion utilisé. Cette stratégie nous permet d'éliminer certains artefacts produits par la méthode originale et d'obtenir ainsi de meilleurs résultats.
+Nous présentons une méthode d'échantillonnage pour l'algorithme du lancer de rayons~\cite{BIR12}. Cette méthode est basée sur l'utilisation d'un squelette topologique curviligne du vide de la scène. Il nous permet de choisir des directions porteuses d'énergie lors d'un rebond et ainsi améliorer la vitesse de convergence de l'algorithme. La figure~\ref{fig::intro_image} illustre la distribution des rayons dans la scène et la réduction du bruit obtenue avec notre algorithme. Notre méthode est complémentaire aux stratégies présentées ci-dessus dans le sens ou chacune d'entre elles peut être guidée par notre squelette. Nous introduisons ensuite une amélioration de la méthode en utilisant une stratégie d'échantillonnage préférentiel multiple combinant notre densité de probabilité construite à partir du squelette et une densité en accord avec le modèle de réflexion utilisé. Cette stratégie nous permet d'éliminer certains artefacts produits par la méthode originale et d'obtenir ainsi de meilleurs résultats.
 
 \section{Lancer de rayons}
 
@@ -154,7 +154,7 @@ f(\Phi) = f_s(x, \Theta \leftrightarrow \Phi) L(r(x, \Phi) \rightarrow -\Phi)
 
 Malheureusement, il est plus difficile de choisir une distribution adaptée à un produit qu'à une fonction simple. La solution la plus couramment utilisée est d'échantillonner en accord avec la fonction $f_s$. Ce choix se justifie par le fait que la fonction $f_s$ est souvent représentée par un modèle connu de réflexion et des textures. On peut donc utiliser cette donnée immédiatement, l'évaluation du terme $f_s(x, \Theta \leftrightarrow \Phi)$ se faisant en temps constant. Au contraire, l'évaluation du terme $L(r(x, \Phi) \rightarrow -\Phi)$ relance la récursion, sa valeur n'est donc pas immédiatement accessible.
 
-Notre méthode conduit à la construction d'une distribution adaptée au terme $L(r(x, \Phi) \rightarrow -\Phi)$. La procédure est détaillée dans la section \ref{sec::skel_based_imp_sampling}.
+Notre méthode conduit à la construction d'une distribution adaptée au terme $L(r(x, \Phi) \rightarrow -\Phi)$. La procédure est détaillée dans la section~\ref{sec::skel_based_imp_sampling}.
 %
 %\subsection{Algorithme}
 %
@@ -197,7 +197,7 @@ Notre méthode conduit à la construction d'une distribution adaptée au terme $L(r
 \section{Échantillonnage préférentiel guidé par le squelette du vide}
 \label{sec::skel_based_imp_sampling}
 
-Comme nous l'avons évoqué dans la section \ref{sec::importance_sampling}, notre objectif est de construire une densité de probabilité permettant d'échantillonner préférentiellement les directions porteuses d'énergie, c'est à dire les directions $\Phi$ pour lesquelles le terme $L(x \leftarrow \Phi)$ est fort. Notre méthode utilise un squelette du vide de la scène pour identifier les chemins porteurs d'énergie. Ce squelette est pré-traité pour construire un ensemble de points d'importance. Ces points sont fournis en entrée de l'algorithme de lancer de rayons et nous permettent à chaque rebond de construire une distribution nous faisant rebondir dans leur direction.
+Comme nous l'avons évoqué dans la section~\ref{sec::importance_sampling}, notre objectif est de construire une densité de probabilité permettant d'échantillonner préférentiellement les directions porteuses d'énergie, c'est à dire les directions $\Phi$ pour lesquelles le terme $L(x \leftarrow \Phi)$ est fort. Notre méthode utilise un squelette du vide de la scène pour identifier les chemins porteurs d'énergie. Ce squelette est pré-traité pour construire un ensemble de points d'importance. Ces points sont fournis en entrée de l'algorithme de lancer de rayons et nous permettent à chaque rebond de construire une distribution nous faisant rebondir dans leur direction.
 
 Le squelette utilisé est curviligne et possède la même topologie que le vide. Ces choix sont justifiés par deux raisons:
 
@@ -216,7 +216,7 @@ Un squelette d'un objet $X$ est un sous ensemble de points de $X$ possédant la m
 
 Les travaux récents en squelettisation se placent dans le cadre des cubiques complexes afin d'obtenir un squelette robuste~\cite{BC06a}. Nous utilisons l'algorithme de squelettisation présenté dans~\cite{CC09} prenant en entrée un objet voxélisé et produisant un squelette de dimension inférieure centré dans l'objet et représenté par un cubique complexe. Nous avons modifié l'algorithme dans le but de ne conserver que les éléments de dimension 1 conduisant ainsi à l'obtention d'un squelette curviligne.
 
-Le squelette est filtré en utilisant notre méthode présentée dans \cite{Chaussard_phd}. Cette méthode ne requiert aucun paramètre d'entrée: durant la squelettisation nous calculons l'espérance de vie de chaque point de l'objet (le nombre d'itérations nécessaires pour supprimer le point du squelette). Nous calculons également pour chaque point $p$ de l'objet la taille de la boule maximale contenant dans l'objet et contenant $p$ (appelée la valeur d'ouverture de $p$). Le filtrage consiste à garder durant la squelettisation tous les points ayant une espérance de vie supérieure à leur valeur d'ouverture. Cela nous permet d'obtenir un squelette robuste au bruit et conservant l'aspect visuel de l'objet original.
+Le squelette est filtré en utilisant notre méthode présentée dans~\cite{Chaussard_phd}. Cette méthode ne requiert aucun paramètre d'entrée: durant la squelettisation nous calculons l'espérance de vie de chaque point de l'objet (le nombre d'itérations nécessaires pour supprimer le point du squelette). Nous calculons également pour chaque point $p$ de l'objet la taille de la boule maximale contenant dans l'objet et contenant $p$ (appelée la valeur d'ouverture de $p$). Le filtrage consiste à garder durant la squelettisation tous les points ayant une espérance de vie supérieure à leur valeur d'ouverture. Cela nous permet d'obtenir un squelette robuste au bruit et conservant l'aspect visuel de l'objet original.
 
 %A skeleton of an object $X$ is a subset of points of $X$ that possesses the same \textit{topology} of $X$, that is, in 3d, the same number of connected components, holes and cavities. Moreover, a skeleton of $X$ should be centered in $X$ and at most two-dimensional. Some works on skeletonization focus on obtaining a skeleton which \textit{looks like} the object : in this case, the difficulty lies in obtaining a skeleton devoided of spurious elements, which can be seen as noise.
 %
@@ -224,7 +224,7 @@ Le squelette est filtré en utilisant notre méthode présentée dans \cite{Chaussar
 %
 %The skeleton is filtered using our technique explained in \cite{Chaussard_phd}, which requires no user input: during the skeletonization, we calculate the lifespan of each point of the object (the number of iterations necessary to remove a point from the skeleton). We also compute for each point $p$ of the object, the size of the biggest ball included in the object and containing $p$ (called opening value of $p$). The filtering consists in keeping, during skeletonization, all points whose lifespan is superior to their opening value. This provides a noise robust skeleton relevant of the object visual aspect.
 
-La dernière étape consiste à convertir le squelette obtenu (représenté par un cubique complexe) en un graphe dont les n\oe uds sont des points de $\mathbb{R}^3$ et dont les arrêtes encodent la topologie du vide. La figure \ref{fig::skeleton} illustre le squelette curviligne du vide de Sponza. On observe que la topologie est bien conservée (le squelette passe entre chacun des piliers) et qu'il est bien centré dans la scène, conservant ainsi une apparence visuelle proche de la scène.
+La dernière étape consiste à convertir le squelette obtenu (représenté par un cubique complexe) en un graphe dont les n\oe uds sont des points de $\mathbb{R}^3$ et dont les arrêtes encodent la topologie du vide. La figure~\ref{fig::skeleton} illustre le squelette curviligne du vide de Sponza. On observe que la topologie est bien conservée (le squelette passe entre chacun des piliers) et qu'il est bien centré dans la scène, conservant ainsi une apparence visuelle proche de la scène.
 
 \begin{figure}[t!]
 \begin{center}
@@ -239,9 +239,9 @@ En plus du squelette nous conservons une grille 3D couvrant la scène. Nous stock
 
 Soit $G = (V, E)$ le graphe représentant le squelette. Pour chaque n\oe ud $n \in V$ un point d'importance $imp_n$ est construit en direction de la lumière $L$. 
 
-Soit $n_L$ le n\oe ud le plus proche de la lumière. On commence par calculer un arbre des plus courts chemins de racine $n_L$. Pour cela on utilise l'algorithme de Dijkstra \cite{Dij71} et une distance $d$ basée sur l'illumination. Soit $u = (u_1, u_2) \in E$ une arête du graphe. Si le n\oe ud $u_2$ est visible depuis $n_L$ on fixe $d(u) = 1$, sinon $d(u) = 10$. Ainsi les chemins illuminés ont une distance associée plus courte et nous conduisent plus rapidement à la lumière. À l'issue de cette étape on possède pour chaque n\oe ud le plus court chemin vers le n\oe ud $n_L$.
+Soit $n_L$ le n\oe ud le plus proche de la lumière. On commence par calculer un arbre des plus courts chemins de racine $n_L$. Pour cela on utilise l'algorithme de Dijkstra~\cite{Dij71} et une distance $d$ basée sur l'illumination. Soit $u = (u_1, u_2) \in E$ une arête du graphe. Si le n\oe ud $u_2$ est visible depuis $n_L$ on fixe $d(u) = 1$, sinon $d(u) = 10$. Ainsi les chemins illuminés ont une distance associée plus courte et nous conduisent plus rapidement à la lumière. À l'issue de cette étape on possède pour chaque n\oe ud le plus court chemin vers le n\oe ud $n_L$.
 
-Soit $n$ un n\oe ud du graphe. On note $V(n)$ l'ensemble des n\oe uds visibles depuis $n$ le long du plus court chemin vers $n_L$. Le point d'importance $imp_n$ associé à $n$ est le barycentre de $V(n)$ (voir figure \ref{fig::importance_points}).
+Soit $n$ un n\oe ud du graphe. On note $V(n)$ l'ensemble des n\oe uds visibles depuis $n$ le long du plus court chemin vers $n_L$. Le point d'importance $imp_n$ associé à $n$ est le barycentre de $V(n)$ (voir figure~\ref{fig::importance_points}).
 
 \begin{figure}[t!]
 \begin{center}
@@ -262,7 +262,7 @@ Le paramètre $s$ permet de concentrer les tirs de rayons autour de la direction 
 
 \subsection{Résultats et discussion}
 
-Notre méthode conduit à une bonne réduction du bruit, en particulier dans les zones sombres ou l'illumination est exclusivement indirecte (voir figure \ref{fig::four_scenes}).
+Notre méthode conduit à une bonne réduction du bruit, en particulier dans les zones sombres ou l'illumination est exclusivement indirecte (voir figure~\ref{fig::four_scenes}).
 
 \begin{figure*}[t!]
 \begin{center}
@@ -271,7 +271,25 @@ Notre méthode conduit à une bonne réduction du bruit, en particulier dans les zo
 \end{center}
 \end{figure*}
 
-Un artefact apparaît néanmoins: les speckles. Les speckles sont des pixels anormalement illuminés. Cela est dû à un mauvais échantillonnage. Lorsqu'une direction possédant une forte valeur mais une faible probabilité est choisie, l'estimateur de Monte-Carlo donne une valeur trop élevée conduisant à l'apparition d'un speckle. Ce type d'artefact s'estompe en augmentant le nombre de rayons par pixels (dû à la convergence de l'estimateur). Une solution simple pour supprimer ces artefacts est de borner l'illumination à une valeur fixée. On introduit alors un biais dans la méthode puisque une partie de l'énergie lumineuse ne sera jamais distribuée. Une meilleure solution est présentée dans la section \ref{sec::MIS}.
+\begin{table}[t!]
+\centering
+\begin{tabular}{|l|c|c|c|}
+\hline
+Scene & Coût  & résolution  & temps \\
+& mémoire & grille & calcul \\
+\hline
+Corridor& 18 MB & 93x205x250 & 13s \\
+\hline
+Sponza& 130 MB & 210x308x500 & 30s \\
+\hline
+\end{tabular}
+\caption{Coûts associés aux scène Sponza et Corridor}
+\label{tab::couts}
+\end{table}
+
+Le tableau~\ref{tab::couts} indique les co\^uts supplémentaire en terme de mémoire et de temps de calcul associées aux scène Sponza et Corridor. Le temps indiqué inclut la voxelisation, la squelettisation et le calcul des points d'importance. Ce dernier est négligeable comparé aux deux premiers. Notre algorithme de squelettisation n'a pas encore été parallélisé, ce qui explique le temps de calcul relativement élevé.
+
+Notre méthode produit un artefact: les speckles. Les speckles sont des pixels anormalement illuminés. Cela est dû à un mauvais échantillonnage. Lorsqu'une direction possédant une forte valeur mais une faible probabilité est choisie, l'estimateur de Monte-Carlo donne une valeur trop élevée conduisant à l'apparition d'un speckle. Ce type d'artefact s'estompe en augmentant le nombre de rayons par pixels (dû à la convergence de l'estimateur). Une solution simple pour supprimer ces artefacts est de borner l'illumination à une valeur fixée. On introduit alors un biais dans la méthode puisque une partie de l'énergie lumineuse ne sera jamais distribuée. Une meilleure solution est présentée dans la section~\ref{sec::MIS}.
 
 D'autre part, plusieurs cas pathologiques, relativement rares, peuvent nous conduire à nous rabattre sur un échantillonnage basé sur la BRDF:
 \begin{itemize}
@@ -346,7 +364,7 @@ Le paramètre $c_{skel}$ peut être fixé ou bien calculé en fonction du point $x$ 
 
 \subsection{Résultats et discussion}
 
-L'emploi du MIS conduit à une forte réduction des speckles comme le montre la figure \ref{fig::MIS_couloir}. On peut observer un très grand nombre de speckles d\^u au paramètre $s = 2$, entraînant une plus forte concentration autour de la direction d'importance. Le MIS supprime ces speckles tout en conservant la réduction du bruit comme on peut le voir sur le mur de gauche. Les valeurs de MSE confirment ces observations: les speckles constituent l'artefact majeur de notre méthode originale et leur suppression est cruciale pour l'amélioration des images calculées.
+L'emploi du MIS conduit à une forte réduction des speckles comme le montre la figure~\ref{fig::MIS_couloir}. On peut observer un très grand nombre de speckles d\^u au paramètre $s = 2$, entraînant une plus forte concentration autour de la direction d'importance. Le MIS supprime ces speckles tout en conservant la réduction du bruit comme on peut le voir sur le mur de gauche. Les valeurs de MSE confirment ces observations: les speckles constituent l'artefact majeur de notre méthode originale et leur suppression est cruciale pour l'amélioration des images calculées.
 
 \begin{figure*}[t!]
 \begin{center}
@@ -359,7 +377,7 @@ L'emploi du MIS conduit à une forte réduction des speckles comme le montre la fi
 \end{center}
 \end{figure*}
 
-La figure \ref{fig::figure_correction_MIS} est un gros plan sur le coin du couloir. La méthode originale donne un résultat plus sombre que celui obtenu avec le lancer de rayons standard. Cet artefact est dû au fait que l'on n'échantillonne pas l'hémisphère complet autour du point d'impact mais seulement une sous partie centrée autour de la direction d'importance. Au contraire le MIS permet de visiter la totalité des chemins de lumière (si la densité de probabilité utilisée pour le modèle de réflexion est valide).
+La figure~\ref{fig::figure_correction_MIS} est un gros plan sur le coin du couloir. La méthode originale donne un résultat plus sombre que celui obtenu avec le lancer de rayons standard. Cet artefact est dû au fait que l'on n'échantillonne pas l'hémisphère complet autour du point d'impact mais seulement une sous partie centrée autour de la direction d'importance. Au contraire le MIS permet de visiter la totalité des chemins de lumière (si la densité de probabilité utilisée pour le modèle de réflexion est valide).
 
 \section{Conclusion et travaux futurs}
 
