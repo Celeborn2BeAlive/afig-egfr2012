@@ -944,14 +944,14 @@ submitted to \textit{#1}%
 \def\JournalPaper{%
 %\EGpagenumber%
 \noEGpagenumber%
-\copyrightTextTitPag{\p@copyrightTextLong{\number\year}}
-\copyrightTextRunPag{\p@copyrightTextShort{\number\year}}
+\copyrightTextTitPag{\p@copyrightTextLong{\number 2012}}
+\copyrightTextRunPag{\p@copyrightTextShort{\number 2012}}
 %% \pagerange{\mbox{}}%
 \def\ps@titlepage{\let\@mkboth\@gobbletwo
 \def\@oddhead{\raisebox{\z@}[8pt][1pt]{\parbox{0.3\textwidth}{\includegraphics{images/logoafig.pdf}}
    \parbox{0.7\textwidth}{\small\hfill\textit{Journées de l'Association Française d'Informatique Graphique,}
 %   \textit{pp.\ \j@pStartPage--\j@pEndPage,}
-   \textit{\number\year\/}
+   \textit{\number 2012\/}
 %   \textit{Volume \j@volume}, \textit{Numéro \j@issue , pp.\ \j@pStartPage--\j@pEndPage , \j@year\/}
 %   \hfill
  }}}%
@@ -1457,7 +1457,7 @@ submitted to \textit{#1}%
 \def\today{\number\day\ \ifcase\month\or
   January\or February\or March\or April\or May\or June\or
   July\or August\or September\or October\or November\or December
- \fi \ \number\year}
+ \fi \ \number 2012}
 
 %  ****************************************
 %  *         HYPERLINK SUPPORT            *
